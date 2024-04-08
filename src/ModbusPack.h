@@ -48,7 +48,7 @@ public:
     uint8_t* station;
     ModbusBasePack* pack;
     uint16_t *crc;
-    uint8_t buffer[256];
+    uint8_t buffer[384];
     uint8_t* castDiagnose(bool isNew = false);
     uint8_t* castRequest(bool isNew = false);
     uint8_t* castResponse(bool isNew = false);
@@ -130,7 +130,7 @@ public:
   }
   inline bool getValue(uint8_t atAddress){
     uint16_t bitBlock = atAddress/8;
-    if(bitBlock < getBytes()) return 0;
+    if(bitBlock >= getBytes()) return 0;
     //bitBlock = getBytes()-1-bitBlock;
     uint8_t bitIndex = atAddress%8;
     return (values[bitBlock] >> bitIndex)&0x01;
@@ -184,7 +184,7 @@ public:
   }
   inline bool getValue(uint8_t atAddress){
     uint16_t bitBlock = atAddress/8;
-    if(bitBlock < getBytes()) return 0;
+    if(bitBlock >= getBytes()) return 0;
     //bitBlock = getBytes()-1-bitBlock;
     uint8_t bitIndex = atAddress%8;
     return (values[bitBlock] >> bitIndex)&0x01;
@@ -383,7 +383,7 @@ public:
   }
   inline bool getValue(uint8_t atAddress){
     uint16_t bitBlock = atAddress/8;
-    if(bitBlock < getBytes()) return 0;
+    if(bitBlock >= getBytes()) return 0;
     //bitBlock = getBytes()-1-bitBlock;
     uint8_t bitIndex = atAddress%8;
     return (values[bitBlock] >> bitIndex)&0x01;
