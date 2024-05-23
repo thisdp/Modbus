@@ -1,6 +1,5 @@
 #pragma once
 #include <stdint.h>
-//#include <iostream>
 #include "CRC16.h"
 
 extern CRC16 ModbusCRC;
@@ -29,11 +28,15 @@ public:
   virtual void write(Stream &s);
   virtual uint8_t *cast(uint8_t *buf, bool isNew = false);
 
+  inline uint8_t getStation(){ return *(functionCode-1); }
   inline uint8_t getFunctionCode() { return *functionCode; }
   inline void setEOP(uint8_t *p){ endOfPack = p; };
+  inline uint16_t getSize(){ return endOfPack - (functionCode - 1); }
   //virtual void process();
   //ModbusBasePack *CastModbusRequestPack(uint8_t *p);
   //ModbusBasePack *CastModbusResponsePack(uint8_t *p);
+  virtual void pushRegisters(bool toTail, uint16_t quant, uint8_t *data) {}
+  virtual void popRegisters(bool toTail, uint16_t quant) {}
 public: //静态
   static ModbusBasePack* CreateModbusDiagnosePack();
   static ModbusBasePack* CreateModbusRequestPack(uint8_t functionCode);
@@ -49,17 +52,21 @@ public:
     ModbusBasePack* pack;
     uint16_t *crc;
     uint8_t buffer[384];
+    uint16_t validDataLength;
     uint8_t* castDiagnose(bool isNew = false);
     uint8_t* castRequest(bool isNew = false);
     uint8_t* castResponse(bool isNew = false);
     uint8_t* createDiagnose(uint8_t functionCode);
     uint8_t* createRequest(uint8_t functionCode);
     uint8_t* createResponse(uint8_t functionCode);
+    void copy(ModbusFrame &frame, uint16_t length);
     bool verifyCRC();
     void applyCRC();
     void write(Stream &s);
+    void writeRaw(Stream &s, uint16_t length);
 
     inline uint8_t getStation(){ return *station; }
+    inline uint8_t getFunctionCode() { return *(station+1); }
     inline uint16_t getCRC(){ crc = (uint16_t*)(pack->endOfPack); return *crc; }
 };
 
@@ -103,6 +110,7 @@ public:
   inline uint16_t getQuantity(){ return quantity->get(); }
   inline void setStartAddress(uint16_t address) { startAddress->set(address); }
   inline void setQuantity(uint16_t quant) { quantity->set(quant); }
+  void popRegisters(bool toTail, uint16_t quant);
 };
 //回复
 class MBPReadCoilRegisterResponse : public ModbusBasePack{
@@ -116,32 +124,31 @@ public:
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     _quantity = quant;
-    *bytes = (uint8_t)((quant+7)/8);
+    *bytes = (uint8_t)((quant+7)>>3);
     for(uint8_t i = 0;i<*bytes;i++) values[i] = 0;
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, bool state) { 
-    uint8_t bitBlock = atAddress/8;
+    uint8_t bitBlock = (atAddress>>3);
     if(bitBlock >= getBytes()) return;
-    //bitBlock = getBytes()-1-bitBlock;
-    uint8_t bitIndex = atAddress%8;
+    uint8_t bitIndex = atAddress&0x07;
     values[bitBlock] &= ~(1 << bitIndex);
     values[bitBlock] |= (state << bitIndex);
   }
   inline bool getValue(uint8_t atAddress){
-    uint16_t bitBlock = atAddress/8;
+    uint8_t bitBlock = (atAddress>>3);
     if(bitBlock >= getBytes()) return 0;
-    //bitBlock = getBytes()-1-bitBlock;
-    uint8_t bitIndex = atAddress%8;
+    uint8_t bitIndex = atAddress&0x07;
     return (values[bitBlock] >> bitIndex)&0x01;
   }
   inline void addValue(bool state){
     uint16_t vIndex = _quantity;
     _quantity++;
-    *bytes = (uint8_t)((_quantity+7)/8);
+    *bytes = (uint8_t)((_quantity+7)>>3);
     setValue(vIndex,state);
     setEOP(((uint8_t*)values)+getBytes());
   }
+  void pushRegisters(bool toTail, uint16_t quant, uint8_t *data);
 };
 
 /****************读离散输入寄存器0x02****************/
@@ -157,6 +164,7 @@ public:
   inline uint16_t getQuantity(){ return quantity->get(); }
   inline void setStartAddress(uint16_t address) { startAddress->set(address); }
   inline void setQuantity(uint16_t quant) { quantity->set(quant); }
+  void popRegisters(bool toTail, uint16_t quant);
 };
 //回复
 class MBPReadDiscreteInputRegisterResponse : public ModbusBasePack{
@@ -170,32 +178,31 @@ public:
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     _quantity = quant;
-    *bytes = (uint8_t)((quant+7)/8);
+    *bytes = (uint8_t)((quant+7)>>3);
     for(uint8_t i = 0;i<*bytes;i++) values[i] = 0;
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, bool state) { 
-    uint8_t bitBlock = atAddress/8;
+    uint8_t bitBlock = (atAddress>>3);
     if(bitBlock >= getBytes()) return;
-    //bitBlock = getBytes()-1-bitBlock;
-    uint8_t bitIndex = atAddress%8;
+    uint8_t bitIndex = atAddress&0x07;
     values[bitBlock] &= ~(1 << bitIndex);
     values[bitBlock] |= (state << bitIndex);
   }
   inline bool getValue(uint8_t atAddress){
-    uint16_t bitBlock = atAddress/8;
+    uint8_t bitBlock = (atAddress>>3);
     if(bitBlock >= getBytes()) return 0;
-    //bitBlock = getBytes()-1-bitBlock;
-    uint8_t bitIndex = atAddress%8;
+    uint8_t bitIndex = atAddress&0x07;
     return (values[bitBlock] >> bitIndex)&0x01;
   }
   inline void addValue(bool state){
     uint16_t vIndex = _quantity;
     _quantity++;
-    *bytes = (uint8_t)((_quantity+7)/8);
+    *bytes = (uint8_t)((_quantity+7)>>3);
     setValue(_quantity,state);
     setEOP(((uint8_t*)values)+getBytes());
   }
+  void pushRegisters(bool toTail, uint16_t quant, uint8_t *data);
 };
 
 /****************读保持寄存器0x03****************/
@@ -211,6 +218,7 @@ public:
   inline uint16_t getQuantity(){ return quantity->get(); }
   inline void setStartAddress(uint16_t address) { startAddress->set(address); }
   inline void setQuantity(uint16_t quant) { quantity->set(quant); }
+  void popRegisters(bool toTail, uint16_t quant);
 };
 //回复
 class MBPReadHoldingRegisterResponse : public ModbusBasePack{
@@ -230,12 +238,10 @@ public:
   }
   inline void setValue(uint8_t atAddress, uint16_t data) { 
     if(atAddress >= getBytes()/2) return;
-    //atAddress = getBytes()/2-1-atAddress;
     values[atAddress].set(data);
   }
   inline uint16_t getValue(uint8_t atAddress){
     if(atAddress >= getBytes()/2) return 0;
-    //atAddress = getBytes()/2-1-atAddress;
     return values[atAddress].get();
   }
   inline void addValue(uint16_t state){
@@ -245,6 +251,7 @@ public:
     setValue(vIndex,state);
     setEOP(((uint8_t*)values)+getBytes());
   }
+  void pushRegisters(bool toTail, uint16_t quant, uint8_t *data);
 };
 
 /****************读输入寄存器0x04****************/
@@ -260,6 +267,7 @@ public:
   inline uint16_t getQuantity(){ return quantity->get(); }
   inline void setStartAddress(uint16_t address) { startAddress->set(address); }
   inline void setQuantity(uint16_t quant) { quantity->set(quant); }
+  void popRegisters(bool toTail, uint16_t quant);
 };
 //回复
 class MBPReadInputRegisterResponse : public ModbusBasePack{
@@ -279,12 +287,10 @@ public:
   }
   inline void setValue(uint8_t atAddress, uint16_t data) { 
     if(atAddress >= getBytes()/2) return;
-    //atAddress = getBytes()/2-1-atAddress;
     values[atAddress].set(data);
   }
   inline uint16_t getValue(uint8_t atAddress){
     if(atAddress >= getBytes()/2) return 0;
-    //atAddress = getBytes()/2-1-atAddress;
     return values[atAddress].get();
   }
   inline void addValue(uint16_t state){
@@ -294,6 +300,7 @@ public:
     setValue(vIndex,state);
     setEOP(((uint8_t*)values)+getBytes());
   }
+  void pushRegisters(bool toTail, uint16_t quant, uint8_t *data);
 };
 
 /****************写单个线圈寄存器0x05****************/
@@ -366,7 +373,7 @@ public:
   inline uint16_t getStartAddress(){ return startAddress->get(); }
   inline uint16_t getQuantity(){ return quantity->get(); }
   inline void setStartAddress(uint16_t address) { startAddress->set(address); }
-  inline void setQuantity(uint16_t quant) { quantity->set(quant); *bytes = (uint8_t)((quant+7)/8); }
+  inline void setQuantity(uint16_t quant) { quantity->set(quant); *bytes = (uint8_t)((quant+7)>>3); }
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     setQuantity(quant);
@@ -374,18 +381,16 @@ public:
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, bool state) { 
-    uint8_t bitBlock = atAddress/8;
+    uint8_t bitBlock = (atAddress>>3);
     if(bitBlock >= getBytes()) return;
-    //bitBlock = getBytes()-1-bitBlock;
-    uint8_t bitIndex = atAddress%8;
+    uint8_t bitIndex = atAddress&0x07;
     values[bitBlock] &= ~(1 << bitIndex);
     values[bitBlock] |= (state << bitIndex);
   }
   inline bool getValue(uint8_t atAddress){
-    uint16_t bitBlock = atAddress/8;
+    uint8_t bitBlock = (atAddress>>3);
     if(bitBlock >= getBytes()) return 0;
-    //bitBlock = getBytes()-1-bitBlock;
-    uint8_t bitIndex = atAddress%8;
+    uint8_t bitIndex = atAddress&0x07;
     return (values[bitBlock] >> bitIndex)&0x01;
   }
   inline void addValue(bool state){
@@ -394,6 +399,8 @@ public:
     setValue(vIndex,state);
     setEOP(((uint8_t*)values)+getBytes());
   }
+  void pushRegisters(bool toTail, uint16_t quant, uint8_t *data);
+  void popRegisters(bool toTail, uint16_t quant);
 };
 //回复
 class MBPWriteMultipleCoilRegistersResponse : public ModbusBasePack{
@@ -407,6 +414,7 @@ public:
   inline uint16_t getQuantity(){ return quantity->get(); }
   inline void setStartAddress(uint16_t address) { startAddress->set(address); }
   inline void setQuantity(uint16_t quant) { quantity->set(quant); }
+  void pushRegisters(bool toTail, uint16_t quant, uint8_t *data);
 };
 
 /****************写多个保持寄存器0x10****************/
@@ -432,12 +440,10 @@ public:
   }
   inline void setValue(uint8_t atAddress, uint16_t data) { 
     if(atAddress >= getQuantity()) return;
-    //atAddress = getQuantity()-1-atAddress;
     values[atAddress].set(data);
   }
   inline uint16_t getValue(uint8_t atAddress){
     if(atAddress >= getQuantity()) return 0;
-    //atAddress = getQuantity()-1-atAddress;
     return values[atAddress].get();
   }
   inline void addValue(uint16_t state){
@@ -446,6 +452,8 @@ public:
     setValue(vIndex,state);
     setEOP(((uint8_t*)values)+getBytes());
   }
+  void popRegisters(bool toTail, uint16_t quant);
+  void pushRegisters(bool toTail, uint16_t quant, uint8_t *data);
 };
 //回复
 class MBPWriteMultipleHoldingRegistersResponse : public MBPWriteMultipleCoilRegistersResponse{
@@ -459,6 +467,7 @@ public:
   inline uint16_t getQuantity(){ return quantity->get(); }
   inline void setStartAddress(uint16_t address) { startAddress->set(address); }
   inline void setQuantity(uint16_t quant) { quantity->set(quant); }
+  void pushRegisters(bool toTail, uint16_t quant, uint8_t *data);
 };
 
 #pragma pack(pop)
