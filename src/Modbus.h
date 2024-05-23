@@ -36,7 +36,7 @@ public:
   bool update();
   void clear();
   void printFailType(Stream& stream);
-  inline void isStationValid(uint8_t st){ return st >= 1 && st <= 247; }
+  inline bool isStationValid(uint8_t st){ return st >= 1 && st <= 247; }
 protected:
   inline void transmitFrame(){
     applyTxFrameCRC();
