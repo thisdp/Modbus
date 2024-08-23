@@ -1,12 +1,12 @@
 #include "Modbus.h"
 /* 485 Modbus 协议 */
 
-ModbusRS485::ModbusRS485(int uart_nr): RS485(uart_nr){
+ModbusRS485::ModbusRS485(int uart_nr, CRC16 *modbusCRC): RS485(uart_nr), txFrame(modbusCRC), rxFrame(modbusCRC) {
   onReceived = 0;
   clear();
 }
 
-ModbusRS485::ModbusRS485(const HardwareSerial& serial): RS485(serial){
+ModbusRS485::ModbusRS485(const HardwareSerial& serial, CRC16 *modbusCRC): RS485(serial), txFrame(modbusCRC), rxFrame(modbusCRC) {
   onReceived = 0;
   clear();
 }
@@ -59,8 +59,8 @@ void ModbusRS485::printFailType(Stream& stream){
 }
 
 /*Modbus Master*/
-ModbusRS485Master::ModbusRS485Master(int uart_nr): ModbusRS485(uart_nr){}
-ModbusRS485Master::ModbusRS485Master(const HardwareSerial& serial): ModbusRS485(serial){}
+ModbusRS485Master::ModbusRS485Master(int uart_nr, CRC16 *modbusCRC) : ModbusRS485(uart_nr,modbusCRC){}
+ModbusRS485Master::ModbusRS485Master(const HardwareSerial& serial, CRC16 *modbusCRC) : ModbusRS485(serial,modbusCRC){}
 
 void ModbusRS485Master::processPack(){
   if(rxFrame.castResponse()){
@@ -132,7 +132,7 @@ void ModbusRS485Master::transmitOnUpdate(uint8_t targetStation){
 }
 
 bool ModbusRS485Master::transmit(uint8_t targetStation){
-  if(!availableToTransmit()) return false;
+  //if(!availableToTransmit()) return false;
   beginTransmission();
   *(txFrame.station) = targetStation; //设置地址
   transmitFrame();
@@ -143,7 +143,7 @@ bool ModbusRS485Master::transmit(uint8_t targetStation){
 }
 
 bool ModbusRS485Master::transmitRaw(uint8_t targetStation, uint16_t length){
-  if(!availableToTransmit()) return false;
+  //if(!availableToTransmit()) return false;
   beginTransmission();
   *(txFrame.station) = targetStation; //设置地址
   transmitFrameRaw(length);
@@ -156,8 +156,8 @@ bool ModbusRS485Master::transmitRaw(uint8_t targetStation, uint16_t length){
 
 
 /*Modbus Slave*/
-ModbusRS485Slave::ModbusRS485Slave(int uart_nr): ModbusRS485(uart_nr){}
-ModbusRS485Slave::ModbusRS485Slave(const HardwareSerial& serial): ModbusRS485(serial){}
+ModbusRS485Slave::ModbusRS485Slave(int uart_nr, CRC16 *modbusCRC) : ModbusRS485(uart_nr, modbusCRC){}
+ModbusRS485Slave::ModbusRS485Slave(const HardwareSerial& serial, CRC16 *modbusCRC) : ModbusRS485(serial, modbusCRC){}
 
 void ModbusRS485Slave::processPack(){
   if(rxFrame.castRequest()){
@@ -189,7 +189,9 @@ void ModbusRS485Slave::begin(uint8_t pStation,RS485Config conf){
 void ModbusRS485Slave::update(){
   if(transmitOnUpdateFlag && isSendBackDelayComplete()){
     //Serial.println("Send on update");
-    transmit();
+    if(availableToTransmit()){
+      transmit();
+    }
     transmitOnUpdateFlag = false;
   }
   uint8_t incoming = available();
@@ -223,7 +225,7 @@ void ModbusRS485Slave::transmitOnUpdate(){
 }
 
 bool ModbusRS485Slave::transmit(){
-  if(!availableToTransmit()) return false;
+  //if(!availableToTransmit()) return false;
   beginTransmission();
   *(txFrame.station) = station; //设置地址
   transmitFrame();
@@ -233,7 +235,7 @@ bool ModbusRS485Slave::transmit(){
 }
 
 bool ModbusRS485Slave::transmitRaw(uint16_t length){
-  if(!availableToTransmit()) return false;
+  //if(!availableToTransmit()) return false;
   beginTransmission();
   transmitFrameRaw(length);
   endTransmission();

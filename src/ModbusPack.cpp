@@ -1,13 +1,14 @@
 #include "ModbusPack.h"
 
-CRC16 ModbusCRC(CRC16MODBUS);
+__attribute__((weak)) CRC16 gModbusCRC(CRC16MODBUS);
 
 uint16_modbus::uint16_modbus(uint16_t value) {
     set(value);
 }
 
 /*******************************************Modbus帧*******************************************/
-ModbusFrame::ModbusFrame() {
+ModbusFrame::ModbusFrame(CRC16 *crcmgr) {
+    crcMgr = crcmgr == 0?&gModbusCRC:crcmgr;
     pack = 0;
     crc = 0;
     station = buffer;
@@ -77,17 +78,17 @@ uint8_t* ModbusFrame::createDiagnose(uint8_t functionCode) {
 }
 
 bool ModbusFrame::verifyCRC(){
-    ModbusCRC.clear();
+    crcMgr->clear();
     crc = (uint16_t*)(pack->endOfPack);
-    ModbusCRC.update(station,(((int)crc)-((int)station)));
-    return ModbusCRC.get() == *crc;
+    crcMgr->update(station,(((int)crc)-((int)station)));
+    return crcMgr->get() == *crc;
 }
 
 void ModbusFrame::applyCRC(){
-    ModbusCRC.clear();
+    crcMgr->clear();
     crc = (uint16_t*)(pack->endOfPack);
-    ModbusCRC.update(station,(((int)crc)-((int)station)));
-    *crc = ModbusCRC.get();
+    crcMgr->update(station,(((int)crc)-((int)station)));
+    *crc = crcMgr->get();
 }
 
 void ModbusFrame::write(Stream &s){
@@ -225,6 +226,11 @@ void MBPReadDiscreteInputRegisterResponse::write(Stream& s) {
     ModbusBasePack::write(s);
     s.write((uint8_t*)bytes, 1);
     s.write((uint8_t*)values, *bytes);
+    /*Serial.println("Write");
+    for(uint16_t i=0;i<*bytes;i++){
+        Serial.println(values[i],BIN);
+    }
+    Serial.println("Done");*/
 }
 void MBPReadDiscreteInputRegisterResponse::pushRegisters(bool toTail, uint16_t quant, uint8_t *data){
     _quantity = *bytes * 8; //以8为整
@@ -232,7 +238,7 @@ void MBPReadDiscreteInputRegisterResponse::pushRegisters(bool toTail, uint16_t q
     uint8_t origBytes = *bytes;
     uint8_t newBytes = origBytes+deltaBytes;
     if(!toTail){  //从头部添加
-      for (uint8_t i = 0; i < origBytes; i++) values[i+deltaBytes] = values[i];
+      for (uint8_t i = 0; i < origBytes; i++) values[newBytes-1-i] = values[origBytes-1-i];
       for (uint8_t i = 0; i < deltaBytes; i++) values[i] = data[i];
     }else{  //从末尾添加
       for (uint8_t i = 0; i < deltaBytes; i++) values[i+origBytes] = data[i];

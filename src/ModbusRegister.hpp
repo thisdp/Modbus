@@ -8,7 +8,7 @@ template<ModbusRegisterConfigTemplate>
 class ModbusRegister {
 private:
 public:
-    typedef void(*ModbusRegisterSetCallback)(ModbusRegister *reg, uint16_t address);
+    typedef void(*ModbusRegisterSetCallback)(ModbusRegister *reg, uint16_t address, uint16_t oldData);
     typedef bool(*ModbusRegisterGetCallback)(ModbusRegister *reg, uint16_t address, uint16_t &data);
     typedef void(*ModbusOnCustomProcess)(ModbusFrame &packIn, ModbusFrame &packOut);
 
@@ -93,17 +93,19 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::setCoil(uint16_t address, bool
         if(pbCoil == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Coil Register Pointer
         uint16_t bitBlock = address/8;
         uint8_t bitIndex = address%8;
+        uint16_t oldState = (*(pbCoil[bitBlock]) >> bitIndex)&0x01;
         *(pbCoil[bitBlock]) &= ~(1 << bitIndex);
         *(pbCoil[bitBlock]) |= (state << bitIndex);
-        if(onCoilSet) onCoilSet(this,address);
+        if(onCoilSet) onCoilSet(this,address,oldState);
     }else if(address < pbCoilCount+bCoilCount){
         if(bCoil == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Coil Register
         uint16_t npAddress = address-pbCoilCount;
         uint16_t bitBlock = npAddress/8;
         uint8_t bitIndex = npAddress%8;
+        uint16_t oldState = (*(pbCoil[bitBlock]) >> bitIndex)&0x01;
         bCoil[bitBlock] &= ~(1 << bitIndex);
         bCoil[bitBlock] |= (state << bitIndex);
-        if(onCoilSet) onCoilSet(this,address);
+        if(onCoilSet) onCoilSet(this,address,oldState);
     }else{
         return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     }
@@ -257,13 +259,15 @@ template<ModbusRegisterConfigTemplate>
 uint8_t ModbusRegister<ModbusRegisterConfigArgs>::setHold(uint16_t address, uint16_t data){
     if(address < pwHoldCount){
         if(pwHold == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Input Register Pointer
+        uint16_t oldData = *(pwHold[address]);
         *(pwHold[address]) = data;
-        if(onHoldSet) onHoldSet(this,address);
+        if(onHoldSet) onHoldSet(this,address,oldData);
     }else if(address < pwHoldCount+wHoldCount){
         if(wHold == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Input Register
         uint16_t npAddress = address-pwHoldCount;
+        uint16_t oldData = wHold[npAddress];
         wHold[npAddress] = data;
-        if(onHoldSet) onHoldSet(this,address);
+        if(onHoldSet) onHoldSet(this,address,oldData);
     }else{
         return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     }
@@ -496,7 +500,9 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::process(ModbusFrame &frameIn, 
         break; 
     }
     if(result != 0){
+        #ifdef DEBUG_MODBUS_ON
         Serial.println("发送错误回包");
+        #endif
         frameOut.createDiagnose(frameIn.pack->getFunctionCode());
         MBPDiagnose *pOutDiag = (MBPDiagnose *)(frameOut.pack);
         pOutDiag->setDiagnoseCode(result);

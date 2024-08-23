@@ -30,7 +30,8 @@ public:
 
   inline uint8_t getStation(){ return *(functionCode-1); }
   inline uint8_t getFunctionCode() { return *functionCode; }
-  inline void setEOP(uint8_t *p){ endOfPack = p; };
+  inline void setEOP(uint8_t *p){ endOfPack = p; }
+  inline uint8_t *getEOP() { return endOfPack; }
   inline uint16_t getSize(){ return endOfPack - (functionCode - 1); }
   //virtual void process();
   //ModbusBasePack *CastModbusRequestPack(uint8_t *p);
@@ -46,13 +47,14 @@ public: //静态
 /*******************************************Modbus帧*******************************************/
 class ModbusFrame {
 public:
-    ModbusFrame();
+    ModbusFrame(CRC16 *crcmgr = 0);
     ~ModbusFrame();
     uint8_t* station;
     ModbusBasePack* pack;
     uint16_t *crc;
     uint8_t buffer[384];
     uint16_t validDataLength;
+    CRC16 *crcMgr;
     uint8_t* castDiagnose(bool isNew = false);
     uint8_t* castRequest(bool isNew = false);
     uint8_t* castResponse(bool isNew = false);
@@ -68,6 +70,15 @@ public:
     inline uint8_t getStation(){ return *station; }
     inline uint8_t getFunctionCode() { return *(station+1); }
     inline uint16_t getCRC(){ crc = (uint16_t*)(pack->endOfPack); return *crc; }
+    inline uint8_t *getEOP() { return (pack != 0 ? pack->getEOP() : 0);}
+    
+    inline void print(Stream &s){
+      s.print("Write:");
+      s.println(pack->getSize());
+      for(uint8_t i=0;i<(pack->getSize()); i++){
+        s.println((uint16_t)(buffer[i]));
+      }
+    }
 };
 
 /*485数据包必须立刻使用*/
