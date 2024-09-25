@@ -46,6 +46,7 @@ uint8_t* ModbusFrame::castResponse(bool isNew) {
     pack = ModbusBasePack::CreateModbusResponsePack(pBuffer[0]);
     if(pack == 0) return 0;
     pBuffer = pack->cast(pBuffer,isNew);
+    if(pack->isDiagnosePack()) ((MBPDiagnose*)pack)->setDiagnoseCode(pBuffer[0]);
     return pBuffer;
 }
 
@@ -147,7 +148,7 @@ void MBPReadCoilRegisterRequest::write(Stream& s) {
     s.write((uint8_t*)startAddress, 2);
     s.write((uint8_t*)quantity, 2);
 }
-void MBPReadCoilRegisterRequest::popRegisters(bool toTail, uint16_t quant){
+void MBPReadCoilRegisterRequest::popRegisters(bool fromHead, uint16_t quant){
     setQuantity(getQuantity()-quant);  //减去删除的寄存器数量
 }
 //回复
@@ -169,19 +170,19 @@ void MBPReadCoilRegisterResponse::write(Stream& s) {
     s.write((uint8_t*)bytes, 1);
     s.write((uint8_t*)values, *bytes);
 }
-void MBPReadCoilRegisterResponse::pushRegisters(bool toTail, uint16_t quant, uint8_t *data){
-    //如果添加非8的整数倍的数量，则会扩展为8的整数倍对齐
-    _quantity = *bytes * 8; //以8为整
-    uint8_t deltaBytes = (uint8_t)((quant+7)>>3);
-    uint8_t origBytes = *bytes;
-    uint8_t newBytes = origBytes+deltaBytes;
-    if(!toTail){  //从头部添加
-        for (uint8_t i = 0; i < origBytes; i++) values[i+deltaBytes] = values[i];
-        for (uint8_t i = 0; i < deltaBytes; i++) values[i] = data[i];
+void MBPReadCoilRegisterResponse::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
+    //如果添加非16的整数倍的数量，则会扩展为16的整数倍对齐
+    _quantity = getBytes() * 16; //以16为整
+    uint8_t deltaWords = (uint8_t)((quant+15)>>4);
+    uint8_t origWords = getBytes()/2;
+    uint8_t newWords = origWords+deltaWords;
+    if(fromHead){  //从头部添加
+        for (uint8_t i = 0; i < origWords; i++) values[i+deltaWords] = values[i];
+        for (uint8_t i = 0; i < deltaWords; i++) values[i] = data[i];
     }else{  //从末尾添加
-        for (uint8_t i = 0; i < deltaBytes; i++) values[i+origBytes] = data[i];
+        for (uint8_t i = 0; i < deltaWords; i++) values[i+origWords] = ((uint16_t*)data)[i];
     }
-    *bytes = newBytes;
+    *bytes = newWords*2;
     setEOP(((uint8_t*)values)+getBytes());
 }
 
@@ -205,7 +206,7 @@ void MBPReadDiscreteInputRegisterRequest::write(Stream& s) {
     s.write((uint8_t*)startAddress, 2);
     s.write((uint8_t*)quantity, 2);
 }
-void MBPReadDiscreteInputRegisterRequest::popRegisters(bool toTail, uint16_t quant){
+void MBPReadDiscreteInputRegisterRequest::popRegisters(bool fromHead, uint16_t quant){
     setQuantity(getQuantity()-quant);  //减去删除的寄存器数量
 }
 //回复
@@ -232,12 +233,12 @@ void MBPReadDiscreteInputRegisterResponse::write(Stream& s) {
     }
     Serial.println("Done");*/
 }
-void MBPReadDiscreteInputRegisterResponse::pushRegisters(bool toTail, uint16_t quant, uint8_t *data){
+void MBPReadDiscreteInputRegisterResponse::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
     _quantity = *bytes * 8; //以8为整
     uint8_t deltaBytes = (uint8_t)((quant+7)>>3);
     uint8_t origBytes = *bytes;
     uint8_t newBytes = origBytes+deltaBytes;
-    if(!toTail){  //从头部添加
+    if(fromHead){  //从头部添加
       for (uint8_t i = 0; i < origBytes; i++) values[newBytes-1-i] = values[origBytes-1-i];
       for (uint8_t i = 0; i < deltaBytes; i++) values[i] = data[i];
     }else{  //从末尾添加
@@ -266,7 +267,7 @@ void MBPReadHoldingRegisterRequest::write(Stream& s) {
     s.write((uint8_t*)startAddress, 2);
     s.write((uint8_t*)quantity, 2);
 }
-void MBPReadHoldingRegisterRequest::popRegisters(bool toTail, uint16_t quant){
+void MBPReadHoldingRegisterRequest::popRegisters(bool fromHead, uint16_t quant){
     setQuantity(getQuantity()-quant);  //减去删除的寄存器数量
 }
 //回复
@@ -288,19 +289,20 @@ void MBPReadHoldingRegisterResponse::write(Stream& s) {
     s.write((uint8_t*)bytes, 1);
     s.write((uint8_t*)values, *bytes);
 }
-void MBPReadHoldingRegisterResponse::pushRegisters(bool toTail, uint16_t quant, uint8_t *data){
+void MBPReadHoldingRegisterResponse::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
     _quantity = *bytes/2; //2字节
     uint8_t deltaBytes = (uint8_t)(quant*2);
     uint8_t origBytes = *bytes;
     uint8_t newBytes = origBytes+deltaBytes;
-    if(!toTail){  //从头部添加
-      for (uint8_t i = 0; i < origBytes; i++) values[i+deltaBytes] = values[i];
-      for (uint8_t i = 0; i < deltaBytes; i++) values[i] = data[i];
+    uint8_t *bValues = (uint8_t*)values;
+    if(fromHead){  //从头部添加
+      for (uint8_t i = 0; i < origBytes; i++) bValues[i+deltaBytes] = bValues[i];
+      for (uint8_t i = 0; i < deltaBytes; i++) bValues[i] = data[i];
     }else{  //从末尾添加
-      for (uint8_t i = 0; i < deltaBytes; i++) values[i+origBytes] = data[i];
+      for (uint8_t i = 0; i < deltaBytes; i++) bValues[i+origBytes] = data[i];
     }
     *bytes = newBytes;
-    setEOP(((uint8_t*)values)+getBytes());
+    setEOP(bValues+getBytes());
 }
 //读输入寄存器0x04
 //请求
@@ -322,9 +324,9 @@ void MBPReadInputRegisterRequest::write(Stream& s) {
     s.write((uint8_t*)startAddress, 2);
     s.write((uint8_t*)quantity, 2);
 }
-void MBPReadInputRegisterRequest::popRegisters(bool toTail, uint16_t quant){
+void MBPReadInputRegisterRequest::popRegisters(bool fromHead, uint16_t quant){
     setQuantity(getQuantity()-quant);  //减去删除的寄存器数量
-    /*if(!toTail){  //如果从头往前后
+    /*if(fromHead){  //如果从头往前后
       if(!keepStartAddress){  //如果不保持起始地址
         setStartAddress(getStartAddress()+quant); //偏移起始地址
       }
@@ -349,12 +351,12 @@ void MBPReadInputRegisterResponse::write(Stream& s) {
     s.write((uint8_t*)bytes, 1);
     s.write((uint8_t*)values, *bytes);
 }
-void MBPReadInputRegisterResponse::pushRegisters(bool toTail, uint16_t quant, uint8_t *data){
+void MBPReadInputRegisterResponse::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
     _quantity = *bytes/2; //2字节
     uint8_t deltaBytes = (uint8_t)(quant*2);
     uint8_t origBytes = *bytes;
     uint8_t newBytes = origBytes+deltaBytes;
-    if(!toTail){  //从头部添加
+    if(fromHead){  //从头部添加
       for (uint8_t i = 0; i < origBytes; i++) values[i+deltaBytes] = values[i];
       for (uint8_t i = 0; i < deltaBytes; i++) values[i] = data[i];
     }else{  //从末尾添加
@@ -453,7 +455,7 @@ uint8_t* MBPWriteMultipleCoilRegistersRequest::cast(uint8_t *pBuffer, bool isNew
     pBuffer += sizeof(uint16_modbus);
     bytes = pBuffer;
     pBuffer += sizeof(uint8_t);
-    values = pBuffer;
+    values = (uint16_t*)pBuffer;
     if(isNew){  //Initialize Pack
         setStartAddress(0);
         initValues(0);
@@ -471,39 +473,44 @@ void MBPWriteMultipleCoilRegistersRequest::write(Stream& s) {
     s.write((uint8_t*)values, *bytes);
 }
 
-void MBPWriteMultipleCoilRegistersRequest::pushRegisters(bool toTail, uint16_t quant, uint8_t *data){
+void MBPWriteMultipleCoilRegistersRequest::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
     //如果添加非8的整数倍的数量，则会扩展为8的整数倍对齐
-    uint8_t deltaBytes = (uint8_t)((quant+7)>>3);
+    uint8_t deltaBytes = (uint8_t)((quant+15)>>4);
     uint8_t origBytes = *bytes;
     uint8_t newBytes = origBytes+deltaBytes;
     //从byteIndex位置插入
     for (uint8_t i = 0; i < origBytes; i++) values[i+deltaBytes] = values[i];
-    for (uint8_t i = 0; i < deltaBytes; i++) values[i] = data[i];
+    for (uint8_t i = 0; i < deltaBytes; i++) values[i] = ((uint16_t*)data)[i];
     *bytes = newBytes;
     setQuantity(getQuantity()+quant);
     setEOP(((uint8_t*)values)+getBytes());
 }
-void MBPWriteMultipleCoilRegistersRequest::popRegisters(bool toTail, uint16_t quant) {
+void MBPWriteMultipleCoilRegistersRequest::popRegisters(bool fromHead, uint16_t quant) {
     uint16_t totalQuantity = getQuantity();
     if(totalQuantity <= quant) quant = totalQuantity;
     uint16_t remainQuantity = totalQuantity-quant;
-    uint8_t decreaseBytes = (uint8_t)(quant >> 3);
-    uint8_t newBytes = ((remainQuantity + 7) >> 3);
-    if (!toTail) {  //如果从头往后删
-        uint8_t remainDecreaseQuant = quant - (decreaseBytes << 3);
-        for (uint8_t i = 0; i < *bytes - decreaseBytes - 1; i++) {
-            values[i] = (values[i + decreaseBytes] >> remainDecreaseQuant) | (values[i + decreaseBytes + 1] & (0xFF >> (8 - remainDecreaseQuant))) << (8 - remainDecreaseQuant);   //往前挪
+    uint8_t newValueCount = ((remainQuantity + 15) >> 4);
+    if (fromHead) {  //如果从头往后删
+        uint16_t fromWord = quant/16;
+        uint16_t fromBit = quant%16;
+        for (uint8_t i = 0; i < newValueCount; i++) {   //从0到newValueCount-1
+            uint16_t val = values[i+fromWord];
+            uint16_t valNext = 0;
+            if(i+1 < newValueCount){
+                valNext = values[i+1+fromWord];
+            }
+            val = val >> fromBit;
+            val = val | ((valNext & (0xFFFF >> fromBit)) << (16-fromBit));
+            values[i] = val;
         }
-        values[*bytes - decreaseBytes - 1] = values[*bytes - decreaseBytes - 1] >> remainDecreaseQuant;
-        /*if(!keepStartAddress){  //如果不保持起始地址
-          setStartAddress(getStartAddress()+quant); //偏移起始地址
-        }*/
     }else{  //从末尾往前删
-        uint8_t remainDecreaseQuant = remainQuantity % 8;
-        values[newBytes - 1] = values[newBytes - 1]&(0xFF >> (8-remainDecreaseQuant));    //移除高位数据
+        uint8_t remainDecreaseQuant = remainQuantity % 16;  //清除剩余的位
+        uint16_t val = values[newValueCount - 1];
+        val = val & (0xFFFF >> (16-(remainQuantity%16))); //移除高位数据
+        values[newValueCount - 1] = val;
         // 不需要改变起始地址
     }
-    *bytes = newBytes;
+    *bytes = newValueCount*2;
     setQuantity(remainQuantity);
     setEOP(((uint8_t*)values)+getBytes());
 }
@@ -526,7 +533,7 @@ void MBPWriteMultipleCoilRegistersResponse::write(Stream& s) {
     s.write((uint8_t*)startAddress, 2);
     s.write((uint8_t*)quantity, 2);
 }
-void MBPWriteMultipleCoilRegistersResponse::pushRegisters(bool toTail, uint16_t quant, uint8_t *data){
+void MBPWriteMultipleCoilRegistersResponse::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
     setQuantity(getQuantity()+quant);
 }
 
@@ -557,7 +564,7 @@ void MBPWriteMultipleHoldingRegistersRequest::write(Stream& s) {
     s.write((uint8_t*)bytes, 1);
     s.write((uint8_t*)values, *bytes);
 }
-void MBPWriteMultipleHoldingRegistersRequest::popRegisters(bool toTail, uint16_t quant){
+void MBPWriteMultipleHoldingRegistersRequest::popRegisters(bool fromHead, uint16_t quant){
     uint8_t deltaBytes = (uint8_t)(quant*2);
     uint8_t origBytes = *bytes;
     if(origBytes < deltaBytes){
@@ -565,18 +572,18 @@ void MBPWriteMultipleHoldingRegistersRequest::popRegisters(bool toTail, uint16_t
         quant = deltaBytes*2;
     }
     uint8_t newBytes = origBytes-deltaBytes;
-    if(!toTail){  //从头部删除
+    if(fromHead){  //从头部删除
         for (uint8_t i = 0; i < newBytes; i++) values[i] = values[i+deltaBytes];
     } //从末尾删除不需要移动数据
     *bytes = newBytes;
     setQuantity(getQuantity()-quant);
     setEOP(((uint8_t*)values)+getBytes());
 }
-void MBPWriteMultipleHoldingRegistersRequest::pushRegisters(bool toTail, uint16_t quant, uint8_t *data){
+void MBPWriteMultipleHoldingRegistersRequest::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
     uint8_t deltaBytes = (uint8_t)(quant*2);
     uint8_t origBytes = *bytes;
     uint8_t newBytes = origBytes+deltaBytes;
-    if(!toTail){  //从头部添加
+    if(fromHead){  //从头部添加
         for (uint8_t i = 0; i < origBytes; i++) values[i+deltaBytes] = values[i];
         for (uint8_t i = 0; i < deltaBytes; i++) values[i] = data[i];
     }else{  //从末尾添加
@@ -605,7 +612,7 @@ void MBPWriteMultipleHoldingRegistersResponse::write(Stream& s) {
     s.write((uint8_t*)startAddress, 2);
     s.write((uint8_t*)quantity, 2);
 }
-void MBPWriteMultipleHoldingRegistersResponse::pushRegisters(bool toTail, uint16_t quant, uint8_t *data){
+void MBPWriteMultipleHoldingRegistersResponse::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
     setQuantity(getQuantity()+quant);
 }
 
@@ -684,6 +691,10 @@ ModbusBasePack *ModbusBasePack::CreateModbusResponsePack(uint8_t functionCode) {
     }
     case MBPWriteMultipleHoldingRegistersResponse::FunctionCode: {
         ModbusBasePack* mbPack = new MBPWriteMultipleHoldingRegistersResponse();
+        return mbPack;
+    }
+    default:{
+        ModbusBasePack* mbPack = new MBPDiagnose();
         return mbPack;
     }
     }

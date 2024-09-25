@@ -64,7 +64,11 @@ ModbusRS485Master::ModbusRS485Master(const HardwareSerial& serial, CRC16 *modbus
 
 void ModbusRS485Master::processPack(){
   if(rxFrame.castResponse()){
-    verifyRxFrameCRC();
+    if(rxFrame.pack->isDiagnosePack()){
+      //todo
+    }else{
+      verifyRxFrameCRC();
+    }
   }else{
     failType = ModbusRS485::RcvUnsupportedFunctionCode;
   }

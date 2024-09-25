@@ -38,6 +38,7 @@ public:
   //ModbusBasePack *CastModbusResponsePack(uint8_t *p);
   virtual void pushRegisters(bool toTail, uint16_t quant, uint8_t *data) {}
   virtual void popRegisters(bool toTail, uint16_t quant) {}
+  virtual bool isDiagnosePack() { return false;}
 public: //静态
   static ModbusBasePack* CreateModbusDiagnosePack();
   static ModbusBasePack* CreateModbusRequestPack(uint8_t functionCode);
@@ -102,11 +103,12 @@ public:
   uint8_t *cast(uint8_t *buf, bool isNew = false);
   void write(Stream &s);
   inline void setDiagnoseCode(uint8_t code){
-    *diagnoseCode = code;
+    *diagnoseCode = code|0x80;
   }
   inline uint8_t getDiagnoseCode(uint8_t code){
     return *diagnoseCode;
   }
+  bool isDiagnosePack() { return true; }
 };
 /****************读线圈寄存器0x01****************/
 //请求
@@ -135,27 +137,27 @@ public:
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     _quantity = quant;
-    *bytes = (uint8_t)((quant+7)>>3);
+    *bytes = (uint8_t)((quant+15)>>4)*2;
     for(uint8_t i = 0;i<*bytes;i++) values[i] = 0;
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, bool state) { 
-    uint8_t bitBlock = (atAddress>>3);
+    uint8_t bitBlock = (atAddress>>4);
     if(bitBlock >= getBytes()) return;
-    uint8_t bitIndex = atAddress&0x07;
+    uint8_t bitIndex = atAddress&0x0F;
     values[bitBlock] &= ~(1 << bitIndex);
     values[bitBlock] |= (state << bitIndex);
   }
   inline bool getValue(uint8_t atAddress){
-    uint8_t bitBlock = (atAddress>>3);
+    uint8_t bitBlock = (atAddress>>4);
     if(bitBlock >= getBytes()) return 0;
-    uint8_t bitIndex = atAddress&0x07;
+    uint8_t bitIndex = atAddress&0x0F;
     return (values[bitBlock] >> bitIndex)&0x01;
   }
   inline void addValue(bool state){
     uint16_t vIndex = _quantity;
     _quantity++;
-    *bytes = (uint8_t)((_quantity+7)>>3);
+    *bytes = (uint8_t)((_quantity+15)>>4)*2;
     setValue(vIndex,state);
     setEOP(((uint8_t*)values)+getBytes());
   }
@@ -189,27 +191,27 @@ public:
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     _quantity = quant;
-    *bytes = (uint8_t)((quant+7)>>3);
+    *bytes = (uint8_t)((quant+15)>>4)*2;
     for(uint8_t i = 0;i<*bytes;i++) values[i] = 0;
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, bool state) { 
-    uint8_t bitBlock = (atAddress>>3);
+    uint8_t bitBlock = (atAddress>>4);
     if(bitBlock >= getBytes()) return;
-    uint8_t bitIndex = atAddress&0x07;
+    uint8_t bitIndex = atAddress&0x0F;
     values[bitBlock] &= ~(1 << bitIndex);
     values[bitBlock] |= (state << bitIndex);
   }
   inline bool getValue(uint8_t atAddress){
-    uint8_t bitBlock = (atAddress>>3);
+    uint8_t bitBlock = (atAddress>>4);
     if(bitBlock >= getBytes()) return 0;
-    uint8_t bitIndex = atAddress&0x07;
+    uint8_t bitIndex = atAddress&0x0F;
     return (values[bitBlock] >> bitIndex)&0x01;
   }
   inline void addValue(bool state){
     uint16_t vIndex = _quantity;
     _quantity++;
-    *bytes = (uint8_t)((_quantity+7)>>3);
+    *bytes = (uint8_t)((_quantity+15)>>4)*2;
     setValue(_quantity,state);
     setEOP(((uint8_t*)values)+getBytes());
   }
@@ -378,30 +380,30 @@ public:
   uint16_modbus *startAddress;
   uint16_modbus *quantity;
   uint8_t *bytes;
-  uint8_t *values;
+  uint16_t *values; //虽然Modbus是大端字节序，但是线圈寄存器还是按照小端排序，因此可以直接使用uint16_t
   uint8_t *cast(uint8_t *buf, bool isNew = false);
   void write(Stream &s);
   inline uint16_t getStartAddress(){ return startAddress->get(); }
   inline uint16_t getQuantity(){ return quantity->get(); }
   inline void setStartAddress(uint16_t address) { startAddress->set(address); }
-  inline void setQuantity(uint16_t quant) { quantity->set(quant); *bytes = (uint8_t)((quant+7)>>3); }
+  inline void setQuantity(uint16_t quant) { quantity->set(quant); *bytes = (uint8_t)((quant+15)>>4)*2; }
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     setQuantity(quant);
-    for(uint8_t i = 0;i<*bytes;i++) values[i] = 0;
+    for(uint8_t i = 0;i<getBytes()/2;i++) values[i] = 0;
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, bool state) { 
-    uint8_t bitBlock = (atAddress>>3);
+    uint8_t bitBlock = (atAddress>>4);
     if(bitBlock >= getBytes()) return;
-    uint8_t bitIndex = atAddress&0x07;
+    uint8_t bitIndex = atAddress&0x0F;
     values[bitBlock] &= ~(1 << bitIndex);
     values[bitBlock] |= (state << bitIndex);
   }
   inline bool getValue(uint8_t atAddress){
-    uint8_t bitBlock = (atAddress>>3);
+    uint8_t bitBlock = (atAddress>>4);
     if(bitBlock >= getBytes()) return 0;
-    uint8_t bitIndex = atAddress&0x07;
+    uint8_t bitIndex = atAddress&0x0F;
     return (values[bitBlock] >> bitIndex)&0x01;
   }
   inline void addValue(bool state){

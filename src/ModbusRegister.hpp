@@ -39,7 +39,7 @@ public:
     uint16_t *getInputPointer(uint16_t address);
     uint16_t *getHoldPointer(uint16_t address);
     uint16_t &getInputRef(uint16_t address);   //Only non-pointer register
-    uint16_t &getHoldRef(uint16_t address);   //Only non-pointer register
+    uint16_t &getHoldRef(uint16_t address);    //Only non-pointer register
 
     ModbusRegisterGetCallback onHoldGet;
     ModbusRegisterSetCallback onHoldSet;
@@ -306,14 +306,13 @@ template<ModbusRegisterConfigTemplate>
 uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getHold(uint16_t address, uint16_t &data){
     if(address < pwHoldCount){
         if(pwHold == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Input Register Pointer
-        if(!(onHoldGet && onHoldGet(this,address,data)))
-            data = *(pwHold[address]);
+        data = *(pwHold[address]);
+        if(onHoldGet) onHoldGet(this,address,data);
     }else if(address < pwHoldCount+wHoldCount){
         if(wHold == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Input Register
-        if(!(onHoldGet && onHoldGet(this,address,data))){
-            uint16_t npAddress = address-pwHoldCount;
-            data = wHold[npAddress];
-        }
+        uint16_t npAddress = address-pwHoldCount;
+        data = wHold[npAddress];
+        if(onHoldGet) onHoldGet(this,address,data);
     }else{
         return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     }
