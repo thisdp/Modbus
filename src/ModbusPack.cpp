@@ -1,6 +1,6 @@
 #include "ModbusPack.h"
 
-__attribute__((weak)) CRC16 gModbusCRC(CRC16MODBUS);
+CRC16 gModbusCRC(CRC16MODBUS);
 
 uint16_modbus::uint16_modbus(uint16_t value) {
     set(value);
@@ -256,6 +256,7 @@ uint8_t* MBPReadHoldingRegisterRequest::cast(uint8_t *pBuffer, bool isNew) {
     quantity = (uint16_modbus*)(pBuffer);
     pBuffer += sizeof(uint16_modbus);
     setEOP(pBuffer);
+
     if(isNew){  //Initialize Pack
         setStartAddress(0);
         setQuantity(0);

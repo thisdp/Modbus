@@ -7,19 +7,21 @@
 template<ModbusRegisterConfigTemplate>
 class ModbusRegister {
 private:
+    uint16_t emptyPointer;
 public:
     typedef void(*ModbusRegisterSetCallback)(ModbusRegister *reg, uint16_t address, uint16_t oldData);
     typedef bool(*ModbusRegisterGetCallback)(ModbusRegister *reg, uint16_t address, uint16_t &data);
     typedef void(*ModbusOnCustomProcess)(ModbusFrame &packIn, ModbusFrame &packOut);
 
-    uint8_t* pbCoil[(pbCoilCount+7) / 8];    //输出线圈
-    uint8_t* pbDiscreteInput[(pbDiscreteInputCount+7) / 8];    //输入触点
-    uint16_t* pwInput[pwInputCount];   //输入数字量
-    uint16_t* pwHold[pwInputCount];   //输入数字量
-    uint8_t bCoil[(bCoilCount+7) / 8];     //输出线圈
-    uint8_t bDiscreteInput[(bDiscreteInputCount+7) / 8];    //输入触点
-    uint16_t wInput[wInputCount];   //输入数字量
-    uint16_t wHold[wHoldCount];    //保持数字量
+    uint8_t* pbCoil[(pbCoilCount+7) / 8];                       //输出线圈 指针
+    uint8_t* pbDiscreteInput[(pbDiscreteInputCount+7) / 8];     //输入触点 指针
+    uint16_t* pwInput[pwInputCount];                            //输入数字量 指针
+    uint16_t* pwHold[pwHoldCount];                              //保持数字量 指针
+
+    uint8_t bCoil[(bCoilCount+7) / 8];                          //输出线圈
+    uint8_t bDiscreteInput[(bDiscreteInputCount+7) / 8];        //输入触点
+    uint16_t wInput[wInputCount];                               //输入数字量
+    uint16_t wHold[wHoldCount];                                 //保持数字量
 public:
     ModbusRegister();
     uint8_t setCoil(uint16_t address, bool state);
@@ -65,6 +67,10 @@ ModbusRegister<ModbusRegisterConfigArgs>::ModbusRegister() {
     onCoilSet = 0;
     onDiscreteInputGet = 0;
     onInputGet = 0;
+    for(uint32_t i=0;i<(pbCoilCount+7) / 8;i++) pbCoil[i] = (uint8_t*)&emptyPointer;
+    for(uint32_t i=0;i<(pbDiscreteInputCount+7) / 8;i++) pbDiscreteInput[i] = (uint8_t*)&emptyPointer;
+    for(uint32_t i=0;i<pwInputCount;i++) pwInput[i] = &emptyPointer;
+    for(uint32_t i=0;i<pwHoldCount;i++) pwHold[i] = &emptyPointer;
 }
 
 template<ModbusRegisterConfigTemplate>
@@ -385,8 +391,7 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::process(ModbusFrame &frameIn, 
         for(uint16_t i=0; i<pIn->getQuantity(); i++){
             uint16_t state = false;
             result = this->getHold(startAddress+i,state);
-            if(result != 0) break;
-            pOut->setValue(i,state);
+            pOut->setValue(i,result==0?state:0);
         }
         break;
     }

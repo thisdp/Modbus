@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "CRC16.h"
 
-extern CRC16 ModbusCRC;
+extern CRC16 gModbusCRC;
 
 #pragma pack(push, 1) //1字节对齐
 
