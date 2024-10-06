@@ -20,6 +20,7 @@ public:
   
   ModbusCallbackOnReceived onReceived;
   uint32_t stopDelay;
+  uint32_t timeOut;
   uint32_t sendBackStartTick;
   uint32_t sendBackDelay;
 
@@ -35,6 +36,8 @@ public:
   ModbusRS485(const HardwareSerial& serial, CRC16 *modbusCRC = 0);
   bool update();
   void clear();
+  void setStopDelay(uint32_t argStopDelay);
+  void setReceiveTimeOut(uint32_t argTime);
   void printFailType(Stream& stream);
   inline bool isStationValid(uint8_t st){ return st >= 1 && st <= 247; }
 protected:
@@ -58,9 +61,9 @@ protected:
   inline uint8_t getFailType(){
     return failType;
   }
-  inline bool isTimedout(uint32_t stopDelay){
+  inline bool isTimedout(){
     if(state == WaitStation) return false;
-    if(micros()-lastTick > stopDelay) return true;
+    if(micros()-lastTick > timeOut) return true;
     return false;
   }
   inline bool isSendBackDelayComplete(){

@@ -3,11 +3,15 @@
 
 ModbusRS485::ModbusRS485(int uart_nr, CRC16 *modbusCRC): RS485(uart_nr), txFrame(modbusCRC), rxFrame(modbusCRC) {
   onReceived = 0;
+  timeOut = 0;
+  stopDelay = 0;
   clear();
 }
 
 ModbusRS485::ModbusRS485(const HardwareSerial& serial, CRC16 *modbusCRC): RS485(serial), txFrame(modbusCRC), rxFrame(modbusCRC) {
   onReceived = 0;
+  timeOut = 0;
+  stopDelay = 0;
   clear();
 }
 
@@ -39,6 +43,16 @@ bool ModbusRS485::update(){
     if(received >= 384) return 0;
   }
   return 1;
+}
+
+void ModbusRS485::setStopDelay(uint32_t argStopDelay){
+  stopDelay = argStopDelay;
+  if(timeOut <= stopDelay){
+    setReceiveTimeOut(stopDelay); //Make sure timeout is larger than stopDelay
+  }
+}
+void ModbusRS485::setReceiveTimeOut(uint32_t argTime){
+  timeOut = argTime;
 }
 
 void ModbusRS485::printFailType(Stream& stream){
@@ -100,7 +114,7 @@ void ModbusRS485Master::update(){
     transmitOnUpdateFlag = false;
   }
   uint8_t incoming = available();
-  if(state != ModbusRS485::WaitStation && !incoming && isTimedout(stopDelay)){
+  if(state != ModbusRS485::WaitStation && !incoming && isTimedout()){
     if(received >= 4){
       rxFrame.validDataLength = received;
       onGetPack();
@@ -199,7 +213,7 @@ void ModbusRS485Slave::update(){
     transmitOnUpdateFlag = false;
   }
   uint8_t incoming = available();
-  if(state != ModbusRS485::WaitStation && !incoming && isTimedout(stopDelay)){
+  if(state != ModbusRS485::WaitStation && !incoming && isTimedout()){
     /*Serial.println("------");
     Serial.println(micros());
     Serial.println(lastTick);
