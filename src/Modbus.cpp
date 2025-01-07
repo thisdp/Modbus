@@ -5,6 +5,8 @@ ModbusRS485::ModbusRS485(int uart_nr, CRC16 *modbusCRC): RS485(uart_nr), txFrame
   onReceived = 0;
   timeOut = 0;
   stopDelay = 0;
+  failPacks = 0;
+  totalPacks = 0;
   clear();
 }
 
@@ -12,6 +14,8 @@ ModbusRS485::ModbusRS485(const HardwareSerial& serial, CRC16 *modbusCRC): RS485(
   onReceived = 0;
   timeOut = 0;
   stopDelay = 0;
+  failPacks = 0;
+  totalPacks = 0;
   clear();
 }
 
@@ -71,6 +75,10 @@ void ModbusRS485::printFailType(Stream& stream){
       break;
   }
 }
+void ModbusRS485::clearStatics(){
+  failPacks = 0;
+  totalPacks = 0;
+}
 
 /*Modbus Master*/
 ModbusRS485Master::ModbusRS485Master(int uart_nr, CRC16 *modbusCRC) : ModbusRS485(uart_nr,modbusCRC){}
@@ -85,6 +93,10 @@ void ModbusRS485Master::processPack(){
     }
   }else{
     failType = ModbusRS485::RcvUnsupportedFunctionCode;
+  }
+  totalPacks ++;
+  if(failType != RcvNoFail){
+    failPacks ++;
   }
 }
 
@@ -122,7 +134,7 @@ void ModbusRS485Master::update(){
     clear();
   }
   if(waitSlaveResponse){
-    if(millis()-waitSlavePackTick > waitSlavePackTimedout){ //超时
+    if(micros()-waitSlavePackTick > waitSlavePackTimedout){ //超时
       setReceiveWaitTimedout();
       if(onReceived) onReceived(this);
       waitSlaveResponse = false;  //结束等待从机返回
@@ -138,7 +150,7 @@ void ModbusRS485Master::update(){
 }
 
 bool ModbusRS485Master::availableToTransmit(){
-  if(waitSlaveResponse && (millis()-waitSlavePackTick <= waitSlavePackTimedout)) //如果是主机正在等待从机回复且没有超时
+  if(waitSlaveResponse && (micros()-waitSlavePackTick <= waitSlavePackTimedout)) //如果是主机正在等待从机回复且没有超时
     return false; //返回不能发送
   return true;
 }
@@ -156,7 +168,7 @@ bool ModbusRS485Master::transmit(uint8_t targetStation){
   transmitFrame();
   endTransmission();
   waitSlaveResponse = true;
-  waitSlavePackTick = millis();
+  waitSlavePackTick = micros();
   return true;
 }
 
@@ -167,7 +179,7 @@ bool ModbusRS485Master::transmitRaw(uint8_t targetStation, uint16_t length){
   transmitFrameRaw(length);
   endTransmission();
   waitSlaveResponse = true;
-  waitSlavePackTick = millis();
+  waitSlavePackTick = micros();
   return true;
 }
 
@@ -182,6 +194,10 @@ void ModbusRS485Slave::processPack(){
     verifyRxFrameCRC();
   }else{
     failType = ModbusRS485::RcvUnsupportedFunctionCode;
+  }
+  totalPacks ++;
+  if(failType != RcvNoFail){
+    failPacks ++;
   }
 }
 

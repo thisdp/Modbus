@@ -25,6 +25,8 @@ public:
   uint32_t sendBackDelay;
 
   uint32_t lastTick;
+  uint32_t failPacks;
+  uint32_t totalPacks;
   uint8_t received;
   uint8_t state;
   uint8_t failType;
@@ -39,6 +41,7 @@ public:
   void setStopDelay(uint32_t argStopDelay);
   void setReceiveTimeOut(uint32_t argTime);
   void printFailType(Stream& stream);
+  void clearStatics();
   inline bool isStationValid(uint8_t st){ return st >= 1 && st <= 247; }
 protected:
   inline void transmitFrame(){
@@ -81,8 +84,8 @@ class ModbusRS485Master : public ModbusRS485 {
 public:
 	ModbusRS485Master(int uart_nr, CRC16 *modbusCRC = 0);
   ModbusRS485Master(const HardwareSerial& serial, CRC16 *modbusCRC = 0);
-  void begin(size_t baud, uint32_t config = SERIAL_8N1, int8_t rxPin=-1, int8_t txPin=-1, int8_t dePin=-1, int8_t rePin = -1, bool readBack = false, uint32_t pWaitSlaveTimedout = 10);
-  void begin(RS485Config conf,uint32_t pWaitSlaveTimedout = 10);
+  void begin(size_t baud, uint32_t config = SERIAL_8N1, int8_t rxPin=-1, int8_t txPin=-1, int8_t dePin=-1, int8_t rePin = -1, bool readBack = false, uint32_t pWaitSlaveTimedout = 500*1000);
+  void begin(RS485Config conf,uint32_t pWaitSlaveTimedout = 500*1000);
   void update();
   bool availableToTransmit();
   void transmitOnUpdate(uint8_t targetStation);

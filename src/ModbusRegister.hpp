@@ -1,9 +1,10 @@
 #pragma once
 #include "Arduino.h"
 #include "ModbusPack.h"
+#include <vector>
 #define ModbusRegisterConfigTemplate size_t pbCoilCount, size_t bCoilCount, size_t pbDiscreteInputCount, size_t bDiscreteInputCount, size_t pwInputCount, size_t wInputCount, size_t pwHoldCount, size_t wHoldCount
 #define ModbusRegisterConfigArgs pbCoilCount, bCoilCount, pbDiscreteInputCount, bDiscreteInputCount, pwInputCount, wInputCount, pwHoldCount, wHoldCount
-
+using namespace std;
 template<ModbusRegisterConfigTemplate>
 class ModbusRegister {
 private:
@@ -24,11 +25,13 @@ public:
     uint16_t wHold[wHoldCount];                                 //保持数字量
 public:
     ModbusRegister();
-    uint8_t setCoil(uint16_t address, bool state);
-    uint8_t getCoil(uint16_t address, bool &state);
-    bool getCoil(uint16_t address);
-    uint8_t getDiscreteInput(uint16_t address, bool &state);
-    bool getDiscreteInput(uint16_t address);
+    uint8_t setCoil(uint16_t address, uint8_t state);
+    uint8_t getCoil(uint16_t address, uint8_t &state);
+    uint8_t getCoil(uint16_t address);
+    uint8_t setDiscreteInput(uint16_t address, uint8_t state);
+    uint8_t getDiscreteInput(uint16_t address, uint8_t &state);
+    uint8_t getDiscreteInput(uint16_t address);
+    uint8_t setInput(uint16_t address, uint16_t data);
     uint8_t getInput(uint16_t address, uint16_t &data);
     uint16_t getInput(uint16_t address);
     uint8_t setHold(uint16_t address, uint16_t data);
@@ -47,15 +50,22 @@ public:
     ModbusRegisterSetCallback onHoldSet;
     ModbusRegisterGetCallback onCoilGet;
     ModbusRegisterSetCallback onCoilSet;
+    ModbusRegisterGetCallback onDiscreteInputSet;
     ModbusRegisterGetCallback onDiscreteInputGet;
+    ModbusRegisterGetCallback onInputSet;
     ModbusRegisterGetCallback onInputGet;
 
-    void registerCoil(uint16_t address, uint8_t *memAddress);
-    void registerDiscreteInput(uint16_t address, uint8_t *memAddress);
-    void registerInput(uint16_t address, uint16_t *memAddress);
-    void registerHold(uint16_t address, uint16_t *memAddress);
+    uint8_t registerCoil(uint16_t address, uint8_t *target);
+    uint8_t registerCoil(uint16_t address, uint8_t &target);
+    uint8_t registerDiscreteInput(uint16_t address, uint8_t *target);
+    uint8_t registerDiscreteInput(uint16_t address, uint8_t &target);
+    uint8_t registerInput(uint16_t address, uint16_t *target);
+    uint8_t registerInput(uint16_t address, uint16_t &target);
+    uint8_t registerHold(uint16_t address, uint16_t *target);
+    uint8_t registerHold(uint16_t address, uint16_t &target);
 
     uint8_t process(ModbusFrame &packIn, ModbusFrame &packOut);
+    uint8_t processResponse(ModbusFrame &frameResponse, ModbusFrame &frameRequest);
 };
 
 
@@ -74,27 +84,63 @@ ModbusRegister<ModbusRegisterConfigArgs>::ModbusRegister() {
 }
 
 template<ModbusRegisterConfigTemplate>
-void ModbusRegister<ModbusRegisterConfigArgs>::registerCoil(uint16_t address, uint8_t *memAddress){   //一次必须映射8个线圈
-    if(address < pbCoilCount) pbCoil[address] = memAddress;
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::registerCoil(uint16_t address, uint8_t *target){   //一次必须映射8个线圈
+    if(address >= pbCoilCount) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    pbCoil[address] = target;
+    return 0;
 }
 
 template<ModbusRegisterConfigTemplate>
-void ModbusRegister<ModbusRegisterConfigArgs>::registerDiscreteInput(uint16_t address, uint8_t *memAddress){  //一次必须映射8个输入状态
-    if(address < pbDiscreteInputCount) pbDiscreteInput[address] = memAddress;
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::registerCoil(uint16_t address, uint8_t &target){   //一次必须映射8个线圈
+    if(address >= pbCoilCount) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    pbCoil[address] = &target;
+    return 0;
 }
 
 template<ModbusRegisterConfigTemplate>
-void ModbusRegister<ModbusRegisterConfigArgs>::registerInput(uint16_t address, uint16_t *memAddress){
-    if(address < pwInputCount) pwInput[address] = memAddress;
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::registerDiscreteInput(uint16_t address, uint8_t *target){  //一次必须映射8个输入状态
+    if(address >= pbDiscreteInputCount) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    pbDiscreteInput[address] = target;
+    return 0;
 }
 
 template<ModbusRegisterConfigTemplate>
-void ModbusRegister<ModbusRegisterConfigArgs>::registerHold(uint16_t address, uint16_t *memAddress){
-    if(address < pwHoldCount) pwHold[address] = memAddress;
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::registerDiscreteInput(uint16_t address, uint8_t &target){  //一次必须映射8个输入状态
+    if(address >= pbDiscreteInputCount) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    pbDiscreteInput[address] = &target;
+    return 0;
 }
 
 template<ModbusRegisterConfigTemplate>
-uint8_t ModbusRegister<ModbusRegisterConfigArgs>::setCoil(uint16_t address, bool state){
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::registerInput(uint16_t address, uint16_t *target){
+    if(address >= pwInputCount) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    pwInput[address] = target;
+    return 0;
+}
+
+template<ModbusRegisterConfigTemplate>
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::registerInput(uint16_t address, uint16_t &target){
+    if(address >= pwInputCount) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    pwInput[address] = &target;
+    return 0;
+}
+
+template<ModbusRegisterConfigTemplate>
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::registerHold(uint16_t address, uint16_t *target){
+    if(address >= pwHoldCount) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    pwHold[address] = target;
+    return 0;
+}
+
+template<ModbusRegisterConfigTemplate>
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::registerHold(uint16_t address, uint16_t &target){
+    if(address >= pwHoldCount) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    pwHold[address] = &target;
+    return 0;
+}
+
+template<ModbusRegisterConfigTemplate>
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::setCoil(uint16_t address, uint8_t state){
     if(address < pbCoilCount){
         if(pbCoil == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Coil Register Pointer
         uint16_t bitBlock = address/8;
@@ -108,7 +154,7 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::setCoil(uint16_t address, bool
         uint16_t npAddress = address-pbCoilCount;
         uint16_t bitBlock = npAddress/8;
         uint8_t bitIndex = npAddress%8;
-        uint16_t oldState = (*(pbCoil[bitBlock]) >> bitIndex)&0x01;
+        uint16_t oldState = (bCoil[bitBlock] >> bitIndex)&0x01;
         bCoil[bitBlock] &= ~(1 << bitIndex);
         bCoil[bitBlock] |= (state << bitIndex);
         if(onCoilSet) onCoilSet(this,address,oldState);
@@ -134,7 +180,7 @@ uint8_t *ModbusRegister<ModbusRegisterConfigArgs>::getCoilPointer(uint16_t addre
 }
 
 template<ModbusRegisterConfigTemplate>
-uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getCoil(uint16_t address, bool &state){
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getCoil(uint16_t address, uint8_t &state){
     if(address < pbCoilCount){
         if(pbCoil == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Coil Register Pointer
         uint16_t bitBlock = address/8;
@@ -161,10 +207,35 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getCoil(uint16_t address, bool
 }
 
 template<ModbusRegisterConfigTemplate>
-bool ModbusRegister<ModbusRegisterConfigArgs>::getCoil(uint16_t address){
-    bool state = false;
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getCoil(uint16_t address){
+    uint8_t state = false;
     this->getCoil(address, state);
     return state;
+}
+
+template<ModbusRegisterConfigTemplate>
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::setDiscreteInput(uint16_t address, uint8_t state){
+    if(address < pbDiscreteInputCount){
+        if(pbDiscreteInput == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Discrete Input Register Pointer
+        uint16_t bitBlock = address/8;
+        uint8_t bitIndex = address%8;
+        uint16_t oldState = (*(pbDiscreteInput[bitBlock]) >> bitIndex)&0x01;
+        *(pbDiscreteInput[bitBlock]) &= ~(1 << bitIndex);
+        *(pbDiscreteInput[bitBlock]) |= (state << bitIndex);
+        if(onDiscreteInputSet) onDiscreteInputSet(this,address,oldState);
+    }else if(address < pbDiscreteInputCount+bDiscreteInputCount){
+        if(bDiscreteInput == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Discrete Input Register
+        uint16_t npAddress = address-pbDiscreteInputCount;
+        uint16_t bitBlock = npAddress/8;
+        uint8_t bitIndex = npAddress%8;
+        uint16_t oldState = (bDiscreteInput[bitBlock] >> bitIndex)&0x01;
+        bDiscreteInput[bitBlock] &= ~(1 << bitIndex);
+        bDiscreteInput[bitBlock] |= (state << bitIndex);
+        if(onDiscreteInputSet) onDiscreteInputSet(this,address,oldState);
+    }else{
+        return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
+    }
+    return 0;
 }
 
 template<ModbusRegisterConfigTemplate>
@@ -183,7 +254,7 @@ uint8_t *ModbusRegister<ModbusRegisterConfigArgs>::getDiscreteInputPointer(uint1
 }
 
 template<ModbusRegisterConfigTemplate>
-uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getDiscreteInput(uint16_t address, bool &state){
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getDiscreteInput(uint16_t address, uint8_t &state){
     if(address < pbDiscreteInputCount){
         if(pbDiscreteInput == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Discrete Input Register Pointer
         uint16_t bitBlock = address/8;
@@ -210,12 +281,30 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getDiscreteInput(uint16_t addr
 }
 
 template<ModbusRegisterConfigTemplate>
-bool ModbusRegister<ModbusRegisterConfigArgs>::getDiscreteInput(uint16_t address){
-    bool state = false;
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getDiscreteInput(uint16_t address){
+    uint8_t state = false;
     this->getDiscreteInput(address, state);
     return state;
 }
 
+template<ModbusRegisterConfigTemplate>
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::setInput(uint16_t address, uint16_t data){
+    if(address < pwInputCount){
+        if(pwInput == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Input Register Pointer
+        uint16_t oldState = *(pwInput[address]);
+        *(pwInput[address]) = data;
+        if(onInputSet) onInputSet(this,address,oldState);
+    }else if(address < pwInputCount+wInputCount){
+        if(wInput == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Input Register
+        uint16_t oldState = wInput[address];
+        uint16_t npAddress = address-pwInputCount;
+        wInput[npAddress] = data;
+        if(onInputSet) onInputSet(this,address,oldState);
+    }else{
+        return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
+    }
+    return 0;
+}
 
 template<ModbusRegisterConfigTemplate>
 uint16_t *ModbusRegister<ModbusRegisterConfigArgs>::getInputPointer(uint16_t address){
@@ -247,7 +336,6 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getInput(uint16_t address, uin
             uint16_t npAddress = address-pwInputCount;
             data = wInput[npAddress];
         }
-
     }else{
         return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     }
@@ -357,7 +445,7 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::process(ModbusFrame &frameIn, 
         pOut->initValues(pIn->getQuantity());
         uint16_t startAddress = pIn->getStartAddress();
         for(uint16_t i=0; i<pIn->getQuantity(); i++){
-            bool state = false;
+            uint8_t state = false;
             result = this->getCoil(startAddress+i,state);
             if(result != 0) break;
             pOut->setValue(i,state);
@@ -373,7 +461,7 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::process(ModbusFrame &frameIn, 
         pOut->initValues(pIn->getQuantity());
         uint16_t startAddress = pIn->getStartAddress();
         for(uint16_t i=0; i<pIn->getQuantity(); i++){
-            bool state = false;
+            uint8_t state = false;
             result = this->getDiscreteInput(startAddress+i,state);
             if(result != 0) break;
             pOut->setValue(i,state);
@@ -513,3 +601,72 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::process(ModbusFrame &frameIn, 
     }
     return result;
 }
+
+
+template<ModbusRegisterConfigTemplate>
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::processResponse(ModbusFrame &frameResponse, ModbusFrame &frameRequest){
+    uint8_t result = 0;
+    if(frameResponse.pack->getFunctionCode() != frameRequest.pack->getFunctionCode()) return 253;
+    switch(frameResponse.pack->getFunctionCode()){
+    case MBPReadCoilRegisterResponse::FunctionCode: {
+        MBPReadCoilRegisterRequest *fReq = (MBPReadCoilRegisterRequest *)(frameRequest.pack);
+        MBPReadCoilRegisterResponse *fResp = (MBPReadCoilRegisterResponse *)(frameResponse.pack);
+        #ifdef DEBUG_MODBUS_ON
+        Serial.println("读线圈");
+        #endif
+        uint16_t startAddress = fReq->getStartAddress();
+        for(uint16_t i=0; i<fReq->getQuantity(); i++){
+            result = this->setCoil(startAddress+i,fResp->getValue(i));
+            if(result != 0) break;
+        }
+        break;
+    }
+    case MBPReadDiscreteInputRegisterResponse::FunctionCode: {
+        MBPReadDiscreteInputRegisterRequest *fReq = (MBPReadDiscreteInputRegisterRequest *)(frameRequest.pack);
+        MBPReadDiscreteInputRegisterResponse *fResp = (MBPReadDiscreteInputRegisterResponse *)(frameResponse.pack);
+        #ifdef DEBUG_MODBUS_ON
+        Serial.println("读离散输入");
+        #endif
+        uint16_t startAddress = fReq->getStartAddress();
+        for(uint16_t i=0; i<fReq->getQuantity(); i++){
+            result = this->setDiscreteInput(startAddress+i,fResp->getValue(i));
+            if(result != 0) break;
+        }
+        break;
+    }
+    case MBPReadHoldingRegisterResponse::FunctionCode: {
+        MBPReadHoldingRegisterRequest *fReq = (MBPReadHoldingRegisterRequest *)(frameRequest.pack);
+        MBPReadHoldingRegisterResponse *fResp = (MBPReadHoldingRegisterResponse *)(frameResponse.pack);
+        #ifdef DEBUG_MODBUS_ON
+        Serial.println("读保持寄存器");
+        #endif
+        uint16_t startAddress = fReq->getStartAddress();
+        for(uint16_t i=0; i<fReq->getQuantity(); i++){
+            result = this->setHold(startAddress+i,fResp->getValue(i));
+            if(result != 0) break;
+        }
+        break;
+    }
+    case MBPReadInputRegisterResponse::FunctionCode: {
+        MBPReadInputRegisterRequest *fReq = (MBPReadInputRegisterRequest *)(frameRequest.pack);
+        MBPReadInputRegisterResponse *fResp = (MBPReadInputRegisterResponse *)(frameResponse.pack);
+        #ifdef DEBUG_MODBUS_ON
+        Serial.println("读输入寄存器");
+        #endif
+        uint16_t startAddress = fReq->getStartAddress();
+        for(uint16_t i=0; i<fReq->getQuantity(); i++){
+            result = this->setInput(startAddress+i,fResp->getValue(i));
+            if(result != 0) break;
+        }
+        break;
+    }
+    default:
+        break; 
+    }
+    return result;
+}
+
+
+
+
+
