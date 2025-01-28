@@ -50,10 +50,10 @@ public:
     ModbusRegisterSetCallback onHoldSet;
     ModbusRegisterGetCallback onCoilGet;
     ModbusRegisterSetCallback onCoilSet;
-    ModbusRegisterGetCallback onDiscreteInputSet;
     ModbusRegisterGetCallback onDiscreteInputGet;
-    ModbusRegisterGetCallback onInputSet;
+    ModbusRegisterSetCallback onDiscreteInputSet;
     ModbusRegisterGetCallback onInputGet;
+    ModbusRegisterSetCallback onInputSet;
 
     uint8_t registerCoil(uint16_t address, uint8_t *target);
     uint8_t registerCoil(uint16_t address, uint8_t &target);

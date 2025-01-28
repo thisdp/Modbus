@@ -18,9 +18,9 @@ public:
 
     RegisterType type;
 
-    RegVariant() : type(RegisterType::Direct), data() {}
-    RegVariant(T v) : type(RegisterType::Direct), data() { this->data.value = v; }
-    RegVariant(T* p) : type(RegisterType::Pointer), data() { this->data.ptr = p; }
+    RegVariant() : data(), type(RegisterType::Direct) {}
+    RegVariant(T v) : data(), type(RegisterType::Direct) { this->data.value = v; }
+    RegVariant(T* p) : data(), type(RegisterType::Pointer) { this->data.ptr = p; }
     bool isDirect() const { return type == RegisterType::Direct; }
     bool isPointer() const { return type == RegisterType::Pointer; }
     T &get() {
@@ -100,10 +100,10 @@ public:
     ModbusRegisterVariantSetCallback onHoldSet;
     ModbusRegisterVariantGetCallback onCoilGet;
     ModbusRegisterVariantSetCallback onCoilSet;
-    ModbusRegisterVariantGetCallback onDiscreteInputSet;
     ModbusRegisterVariantGetCallback onDiscreteInputGet;
-    ModbusRegisterVariantGetCallback onInputSet;
+    ModbusRegisterVariantSetCallback onDiscreteInputSet;
     ModbusRegisterVariantGetCallback onInputGet;
+    ModbusRegisterVariantSetCallback onInputSet;
 
     uint8_t registerCoil(uint16_t address, uint8_t *memAddress);
     uint8_t registerDiscreteInput(uint16_t address, uint8_t *memAddress);

@@ -27,7 +27,7 @@ public:
   uint32_t lastTick;
   uint32_t failPacks;
   uint32_t totalPacks;
-  uint8_t received;
+  uint16_t received;
   uint8_t state;
   uint8_t failType;
 

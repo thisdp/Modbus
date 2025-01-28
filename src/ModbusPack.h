@@ -39,6 +39,7 @@ public:
   virtual void pushRegisters(bool toTail, uint16_t quant, uint8_t *data) {}
   virtual void popRegisters(bool toTail, uint16_t quant) {}
   virtual bool isDiagnosePack() { return false;}
+  virtual ~ModbusBasePack(){}; // 定义基类的虚析构函数，若不定义该函数，则会出现警告信息
 public: //静态
   static ModbusBasePack* CreateModbusDiagnosePack();
   static ModbusBasePack* CreateModbusRequestPack(uint8_t functionCode);
@@ -209,7 +210,7 @@ public:
     return (values[bitBlock] >> bitIndex)&0x01;
   }
   inline void addValue(bool state){
-    uint16_t vIndex = _quantity;
+    //uint16_t vIndex = _quantity;
     _quantity++;
     *bytes = (uint8_t)((_quantity+15)>>4)*2;
     setValue(_quantity,state);
