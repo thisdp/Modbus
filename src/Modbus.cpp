@@ -1,16 +1,8 @@
 #include "Modbus.h"
 /* 485 Modbus 协议 */
 
-ModbusRS485::ModbusRS485(int uart_nr, CRC16 *modbusCRC): RS485(uart_nr), txFrame(modbusCRC), rxFrame(modbusCRC) {
-  onReceived = 0;
-  timeOut = 0;
-  stopDelay = 0;
-  failPacks = 0;
-  totalPacks = 0;
-  clear();
-}
 
-ModbusRS485::ModbusRS485(const HardwareSerial& serial, CRC16 *modbusCRC): RS485(serial), txFrame(modbusCRC), rxFrame(modbusCRC) {
+ModbusRS485::ModbusRS485(HardwareSerial& serial, CRC16 *modbusCRC): RS485(serial), txFrame(modbusCRC), rxFrame(modbusCRC) {
   onReceived = 0;
   timeOut = 0;
   stopDelay = 0;
@@ -60,29 +52,30 @@ void ModbusRS485::setReceiveTimeOut(uint32_t argTime){
 }
 
 void ModbusRS485::printFailType(Stream& stream){
-  switch(failType){
-    case RcvWaitTimedout:
-      stream.print("Timedout");
-      break;
-    case RcvVerifyFailed:
-      stream.print("Verify Failed");
-      break;
-    case RcvOverflow:
-      stream.print("Overflow");
-      break;
-    case RcvUnsupportedFunctionCode:
-      stream.print("InvalidFunctionCode");
-      break;
-  }
+  stream.print(toFailType(failType));
 }
+
+const char* ModbusRS485::toFailType(uint8_t failTypeID){
+  switch(failTypeID){
+    case RcvWaitTimedout:
+      return "Timedout";
+    case RcvVerifyFailed:
+      return "Verify Failed";
+    case RcvOverflow:
+      return "Overflow";
+    case RcvUnsupportedFunctionCode:
+      return "Invalid Function Code";
+  }
+  return "Unknown";
+}
+
 void ModbusRS485::clearStatics(){
   failPacks = 0;
   totalPacks = 0;
 }
 
 /*Modbus Master*/
-ModbusRS485Master::ModbusRS485Master(int uart_nr, CRC16 *modbusCRC) : ModbusRS485(uart_nr,modbusCRC){}
-ModbusRS485Master::ModbusRS485Master(const HardwareSerial& serial, CRC16 *modbusCRC) : ModbusRS485(serial,modbusCRC){}
+ModbusRS485Master::ModbusRS485Master(HardwareSerial& serial, CRC16 *modbusCRC) : ModbusRS485(serial,modbusCRC){}
 
 void ModbusRS485Master::processPack(){
   if(rxFrame.castResponse()){
@@ -129,6 +122,9 @@ void ModbusRS485Master::update(){
   if(state != ModbusRS485::WaitStation && !incoming && isTimedout()){
     if(received >= 4){
       rxFrame.validDataLength = received;
+      onGetPack();
+    }else{
+      failType = ModbusRS485::RcvWaitTimedout;
       onGetPack();
     }
     clear();
@@ -186,8 +182,7 @@ bool ModbusRS485Master::transmitRaw(uint8_t targetStation, uint16_t length){
 
 
 /*Modbus Slave*/
-ModbusRS485Slave::ModbusRS485Slave(int uart_nr, CRC16 *modbusCRC) : ModbusRS485(uart_nr, modbusCRC){}
-ModbusRS485Slave::ModbusRS485Slave(const HardwareSerial& serial, CRC16 *modbusCRC) : ModbusRS485(serial, modbusCRC){}
+ModbusRS485Slave::ModbusRS485Slave(HardwareSerial& serial, CRC16 *modbusCRC) : ModbusRS485(serial, modbusCRC){}
 
 void ModbusRS485Slave::processPack(){
   if(rxFrame.castRequest()){
@@ -238,6 +233,9 @@ void ModbusRS485Slave::update(){
     Serial.println("------");*/
     if(received >= 4){
       rxFrame.validDataLength = received;
+      onGetPack();
+    }else{
+      failType = ModbusRS485::RcvWaitTimedout;
       onGetPack();
     }
     clear();
