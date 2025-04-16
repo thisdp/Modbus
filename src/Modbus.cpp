@@ -279,6 +279,9 @@ uint8_t ModbusRS485Slave::getStation(){
   return station;
 }
 
-void ModbusRS485Slave::setStation(uint8_t newStation){
+bool ModbusRS485Slave::setStation(uint8_t newStation){
+  if(newStation == 0) return false; //Station ID 0 is invalid
+  if(newStation > 247) return false; //Station Range is invalid
   station = newStation;
+  return true;
 }

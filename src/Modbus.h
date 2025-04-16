@@ -112,7 +112,7 @@ public:
   bool transmitRaw(uint16_t length);
   void processPack();
   uint8_t getStation();
-  void setStation(uint8_t station);
+  bool setStation(uint8_t station);
 private:
   void onGetPack();
   bool transmitOnUpdateFlag;
