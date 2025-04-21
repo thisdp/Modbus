@@ -573,26 +573,28 @@ void MBPWriteMultipleHoldingRegistersRequest::popRegisters(bool fromHead, uint16
         quant = deltaBytes*2;
     }
     uint8_t newBytes = origBytes-deltaBytes;
+    uint8_t *u8Values = (uint8_t*)values;
     if(fromHead){  //从头部删除
-        for (uint8_t i = 0; i < newBytes; i++) values[i] = values[i+deltaBytes];
+        for (uint8_t i = 0; i < newBytes; i++) u8Values[i] = u8Values[i+deltaBytes];
     } //从末尾删除不需要移动数据
     *bytes = newBytes;
     setQuantity(getQuantity()-quant);
-    setEOP(((uint8_t*)values)+getBytes());
+    setEOP(u8Values+getBytes());
 }
 void MBPWriteMultipleHoldingRegistersRequest::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
     uint8_t deltaBytes = (uint8_t)(quant*2);
     uint8_t origBytes = *bytes;
     uint8_t newBytes = origBytes+deltaBytes;
+    uint8_t *u8Values = (uint8_t*)values;
     if(fromHead){  //从头部添加
-        for (uint8_t i = 0; i < origBytes; i++) values[i+deltaBytes] = values[i];
-        for (uint8_t i = 0; i < deltaBytes; i++) values[i] = data[i];
+        for (uint8_t i = 0; i < origBytes; i++) u8Values[i+deltaBytes] = u8Values[i];
+        for (uint8_t i = 0; i < deltaBytes; i++) u8Values[i] = data[i];
     }else{  //从末尾添加
-        for (uint8_t i = 0; i < deltaBytes; i++) values[i+origBytes] = data[i];
+        for (uint8_t i = 0; i < deltaBytes; i++) u8Values[i+origBytes] = data[i];
     }
     *bytes = newBytes;
     setQuantity(getQuantity()+quant);
-    setEOP(((uint8_t*)values)+getBytes());
+    setEOP(u8Values+getBytes());
 }
 //回复
 uint8_t* MBPWriteMultipleHoldingRegistersResponse::cast(uint8_t *pBuffer, bool isNew) {
