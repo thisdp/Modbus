@@ -505,9 +505,9 @@ void MBPWriteMultipleCoilRegistersRequest::popRegisters(bool fromHead, uint16_t 
             values[i] = val;
         }
     }else{  //从末尾往前删
-        uint8_t remainDecreaseQuant = remainQuantity % 16;  //清除剩余的位
         uint16_t val = values[newValueCount - 1];
-        val = val & (0xFFFF >> (16-(remainQuantity%16))); //移除高位数据
+        uint8_t remainDecreaseQuant = remainQuantity % 16;  //清除剩余的位
+        val = val & (0xFFFF >> (16-remainDecreaseQuant)); //移除高位数据
         values[newValueCount - 1] = val;
         // 不需要改变起始地址
     }
