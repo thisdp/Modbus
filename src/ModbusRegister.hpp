@@ -185,7 +185,7 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getCoil(uint16_t address, uint
         if(pbCoil == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Coil Register Pointer
         uint16_t bitBlock = address/8;
         uint8_t bitIndex = address%8;
-        uint16_t u16State = state;
+        uint16_t u16State = 0;
         if(onCoilGet && onCoilGet(this,address,u16State))
             state = u16State;
         else
@@ -195,7 +195,7 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getCoil(uint16_t address, uint
         uint16_t npAddress = address-pbCoilCount;
         uint16_t bitBlock = npAddress/8;
         uint8_t bitIndex = npAddress%8;
-        uint16_t u16State = state;
+        uint16_t u16State = 0;
         if(onCoilGet && onCoilGet(this,address,u16State))
             state = u16State;
         else
@@ -259,21 +259,23 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getDiscreteInput(uint16_t addr
         if(pbDiscreteInput == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Discrete Input Register Pointer
         uint16_t bitBlock = address/8;
         uint8_t bitIndex = address%8;
-        uint16_t u16State = state;
-        if(onDiscreteInputGet && onDiscreteInputGet(this,address,u16State))
+        uint16_t u16State = 0;
+        if(onDiscreteInputGet && onDiscreteInputGet(this,address,u16State)){
             state = u16State;
-        else
+        }else{
             state = (*(pbDiscreteInput[bitBlock]) >> bitIndex)&0x01;
+        }
     }else if(address < pbDiscreteInputCount+bDiscreteInputCount){
         if(bDiscreteInput == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Discrete Input Register
         uint16_t npAddress = address-pbDiscreteInputCount;
         uint16_t bitBlock = npAddress/8;
         uint8_t bitIndex = npAddress%8;
-        uint16_t u16State = state;
-        if(onDiscreteInputGet && onDiscreteInputGet(this,address,u16State))
+        uint16_t u16State = 0;
+        if(onDiscreteInputGet && onDiscreteInputGet(this,address,u16State)){
             state = u16State;
-        else
+        }else{
             state = (bDiscreteInput[bitBlock] >> bitIndex)&0x01;
+        }
     }else{
         return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     }

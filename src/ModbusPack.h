@@ -143,16 +143,16 @@ public:
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, bool state) { 
-    uint8_t bitBlock = (atAddress>>4);
+    uint8_t bitBlock = (atAddress>>3);  //使用Byte寻址
     if(bitBlock >= getBytes()) return;
-    uint8_t bitIndex = atAddress&0x0F;
+    uint8_t bitIndex = atAddress&0x07;
     values[bitBlock] &= ~(1 << bitIndex);
     values[bitBlock] |= (state << bitIndex);
   }
   inline bool getValue(uint8_t atAddress){
-    uint8_t bitBlock = (atAddress>>4);
+    uint8_t bitBlock = (atAddress>>3);  //使用Byte寻址
     if(bitBlock >= getBytes()) return 0;
-    uint8_t bitIndex = atAddress&0x0F;
+    uint8_t bitIndex = atAddress&0x07;
     return (values[bitBlock] >> bitIndex)&0x01;
   }
   inline void addValue(bool state){
@@ -197,16 +197,16 @@ public:
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, bool state) { 
-    uint8_t bitBlock = (atAddress>>4);
+    uint8_t bitBlock = (atAddress>>3);  //使用Byte寻址
     if(bitBlock >= getBytes()) return;
-    uint8_t bitIndex = atAddress&0x0F;
+    uint8_t bitIndex = atAddress&0x07;
     values[bitBlock] &= ~(1 << bitIndex);
     values[bitBlock] |= (state << bitIndex);
   }
   inline bool getValue(uint8_t atAddress){
-    uint8_t bitBlock = (atAddress>>4);
+    uint8_t bitBlock = (atAddress>>3);  //使用Byte寻址
     if(bitBlock >= getBytes()) return 0;
-    uint8_t bitIndex = atAddress&0x0F;
+    uint8_t bitIndex = atAddress&0x07;
     return (values[bitBlock] >> bitIndex)&0x01;
   }
   inline void addValue(bool state){

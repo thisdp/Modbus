@@ -122,6 +122,8 @@ void ModbusRS485Master::update(){
   if(state != ModbusRS485::WaitStation && !incoming && isTimedout()){
     if(received >= 4){
       rxFrame.validDataLength = received;
+      //Serial.println(micros());
+      //Serial.println("Get Pack");
       onGetPack();
     }else{
       failType = ModbusRS485::RcvWaitTimedout;
@@ -130,6 +132,9 @@ void ModbusRS485Master::update(){
     clear();
   }
   if(waitSlaveResponse){
+    //Serial.println(micros());
+    //Serial.println(micros()-waitSlavePackTick);
+    //Serial.println(waitSlavePackTimedout);
     if(micros()-waitSlavePackTick > waitSlavePackTimedout){ //超时
       setReceiveWaitTimedout();
       if(onReceived) onReceived(this);
@@ -163,8 +168,8 @@ bool ModbusRS485Master::transmit(uint8_t targetStation){
   *(txFrame.station) = targetStation; //设置地址
   transmitFrame();
   endTransmission();
-  waitSlaveResponse = true;
   waitSlavePackTick = micros();
+  waitSlaveResponse = true;
   return true;
 }
 
@@ -174,8 +179,8 @@ bool ModbusRS485Master::transmitRaw(uint8_t targetStation, uint16_t length){
   *(txFrame.station) = targetStation; //设置地址
   transmitFrameRaw(length);
   endTransmission();
-  waitSlaveResponse = true;
   waitSlavePackTick = micros();
+  waitSlaveResponse = true;
   return true;
 }
 

@@ -176,11 +176,12 @@ void MBPReadCoilRegisterResponse::pushRegisters(bool fromHead, uint16_t quant, u
     uint8_t deltaWords = (uint8_t)((quant+15)>>4);
     uint8_t origWords = getBytes()/2;
     uint8_t newWords = origWords+deltaWords;
+    uint16_t *wValues = (uint16_t *)values;
     if(fromHead){  //从头部添加
-        for (uint8_t i = 0; i < origWords; i++) values[i+deltaWords] = values[i];
-        for (uint8_t i = 0; i < deltaWords; i++) values[i] = data[i];
+        for (int8_t i = origWords - 1; i >= 0; i--) wValues[i + deltaWords] = wValues[i];
+        for (uint8_t i = 0; i < deltaWords; i++) wValues[i] = ((uint16_t*)data)[i];
     }else{  //从末尾添加
-        for (uint8_t i = 0; i < deltaWords; i++) values[i+origWords] = ((uint16_t*)data)[i];
+        for (uint8_t i = 0; i < deltaWords; i++) wValues[i+origWords] = ((uint16_t*)data)[i];
     }
     *bytes = newWords*2;
     setEOP(((uint8_t*)values)+getBytes());
@@ -234,17 +235,18 @@ void MBPReadDiscreteInputRegisterResponse::write(Stream& s) {
     Serial.println("Done");*/
 }
 void MBPReadDiscreteInputRegisterResponse::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
-    _quantity = *bytes * 8; //以8为整
-    uint8_t deltaBytes = (uint8_t)((quant+7)>>3);
-    uint8_t origBytes = *bytes;
-    uint8_t newBytes = origBytes+deltaBytes;
+    _quantity = getBytes() * 16; //以16为整
+    uint8_t deltaWords = (uint8_t)((quant+15)>>4);
+    uint8_t origWords = getBytes()/2;
+    uint8_t newWords = origWords+deltaWords;
+    uint16_t *wValues = (uint16_t *)values;
     if(fromHead){  //从头部添加
-      for (uint8_t i = 0; i < origBytes; i++) values[newBytes-1-i] = values[origBytes-1-i];
-      for (uint8_t i = 0; i < deltaBytes; i++) values[i] = data[i];
+        for (int8_t i = origWords - 1; i >= 0; i--) wValues[i + deltaWords] = wValues[i];
+        for (uint8_t i = 0; i < deltaWords; i++) wValues[i] = ((uint16_t*)data)[i];
     }else{  //从末尾添加
-      for (uint8_t i = 0; i < deltaBytes; i++) values[i+origBytes] = data[i];
+        for (uint8_t i = 0; i < deltaWords; i++) wValues[i+origWords] = ((uint16_t*)data)[i];
     }
-    *bytes = newBytes;
+    *bytes = newWords*2;
     setEOP(((uint8_t*)values)+getBytes());
 }
 //读保持寄存器0x03
