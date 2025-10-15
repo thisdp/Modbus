@@ -25,8 +25,9 @@ public:
   uint32_t sendBackDelay;
 
   uint32_t lastTick;
-  uint32_t failPacks;
-  uint32_t totalPacks;
+  uint32_t rxFailPacks;
+  uint32_t rxPacks;
+  uint32_t txPacks;
   uint16_t received;
   uint8_t state;
   uint8_t failType;
@@ -43,6 +44,11 @@ public:
   const char* toFailType(uint8_t failTypeID);
   void clearStatics();
   inline bool isStationValid(uint8_t st){ return st >= 1 && st <= 247; }
+  
+  // 获取计数器的函数
+  inline uint32_t getTxPacks(){ return txPacks; }
+  inline uint32_t getRxPacks(){ return rxPacks; }
+  inline uint32_t getRxFailPacks(){ return rxFailPacks; }
 protected:
   inline void transmitFrame(){
     applyTxFrameCRC();

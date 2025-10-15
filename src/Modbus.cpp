@@ -6,8 +6,9 @@ ModbusRS485::ModbusRS485(HardwareSerial& serial, CRC16 *modbusCRC): RS485(serial
   onReceived = 0;
   timeOut = 0;
   stopDelay = 0;
-  failPacks = 0;
-  totalPacks = 0;
+  rxFailPacks = 0;
+  rxPacks = 0;
+  txPacks = 0;
   clear();
 }
 
@@ -70,8 +71,9 @@ const char* ModbusRS485::toFailType(uint8_t failTypeID){
 }
 
 void ModbusRS485::clearStatics(){
-  failPacks = 0;
-  totalPacks = 0;
+  rxFailPacks = 0;
+  rxPacks = 0;
+  txPacks = 0;
 }
 
 /*Modbus Master*/
@@ -87,9 +89,9 @@ void ModbusRS485Master::processPack(){
   }else{
     failType = ModbusRS485::RcvUnsupportedFunctionCode;
   }
-  totalPacks ++;
+  rxPacks ++;
   if(failType != RcvNoFail){
-    failPacks ++;
+    rxFailPacks ++;
   }
 }
 
@@ -168,6 +170,7 @@ bool ModbusRS485Master::transmit(uint8_t targetStation){
   *(txFrame.station) = targetStation; //设置地址
   transmitFrame();
   endTransmission();
+  txPacks++; // 增加发送包计数
   waitSlavePackTick = micros();
   waitSlaveResponse = true;
   return true;
@@ -179,6 +182,7 @@ bool ModbusRS485Master::transmitRaw(uint8_t targetStation, uint16_t length){
   *(txFrame.station) = targetStation; //设置地址
   transmitFrameRaw(length);
   endTransmission();
+  txPacks++; // 增加发送包计数
   waitSlavePackTick = micros();
   waitSlaveResponse = true;
   return true;
@@ -195,9 +199,9 @@ void ModbusRS485Slave::processPack(){
   }else{
     failType = ModbusRS485::RcvUnsupportedFunctionCode;
   }
-  totalPacks ++;
+  rxPacks ++;
   if(failType != RcvNoFail){
-    failPacks ++;
+    rxFailPacks ++;
   }
 }
 
@@ -267,6 +271,7 @@ bool ModbusRS485Slave::transmit(){
   *(txFrame.station) = station; //设置地址
   transmitFrame();
   endTransmission();
+  txPacks++; // 增加发送包计数
   isAllowedToTransmit = false;
   return true;
 }
@@ -276,6 +281,7 @@ bool ModbusRS485Slave::transmitRaw(uint16_t length){
   beginTransmission();
   transmitFrameRaw(length);
   endTransmission();
+  txPacks++; // 增加发送包计数
   isAllowedToTransmit = false;
   return true;
 }

@@ -284,9 +284,10 @@ uint16_t &ModbusRegisterVariant::getHoldRef(uint16_t address){   //Only non-poin
 uint8_t ModbusRegisterVariant::getHold(uint16_t address, uint16_t &data){
     if(address >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     uint16_t u16State = 0;
-    if(!(onHoldGet && onHoldGet(this,address,u16State)))
+    if(!(onHoldGet && onHoldGet(this,address,u16State))){
         if(!wHold[address].get(u16State))
             return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    }
     data = u16State;
     return 0;
 }

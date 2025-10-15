@@ -172,7 +172,6 @@ void MBPReadCoilRegisterResponse::write(Stream& s) {
 }
 void MBPReadCoilRegisterResponse::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
     //如果添加非16的整数倍的数量，则会扩展为16的整数倍对齐
-    _quantity = getBytes() * 16; //以16为整
     uint8_t deltaWords = (uint8_t)((quant+15)>>4);
     uint8_t origWords = getBytes()/2;
     uint8_t newWords = origWords+deltaWords;
