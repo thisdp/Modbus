@@ -88,11 +88,9 @@ void ModbusRS485Master::processPack(){
     }
   }else{
     failType = ModbusRS485::RcvUnsupportedFunctionCode;
-  }
-  rxPacks ++;
-  if(failType != RcvNoFail){
     rxFailPacks ++;
   }
+  rxPacks ++;
 }
 
 void ModbusRS485Master::onGetPack(){
@@ -129,6 +127,7 @@ void ModbusRS485Master::update(){
       onGetPack();
     }else{
       failType = ModbusRS485::RcvWaitTimedout;
+      rxFailPacks ++;
       onGetPack();
     }
     clear();
@@ -146,6 +145,7 @@ void ModbusRS485Master::update(){
   }
   if(!ModbusRS485::update()){ //数据接收过多
     failType = ModbusRS485::RcvOverflow; //溢出
+    rxFailPacks ++;
     rxFrame.validDataLength = received;
     onGetPack();
     clear();
@@ -198,11 +198,9 @@ void ModbusRS485Slave::processPack(){
     verifyRxFrameCRC();
   }else{
     failType = ModbusRS485::RcvUnsupportedFunctionCode;
-  }
-  rxPacks ++;
-  if(failType != RcvNoFail){
     rxFailPacks ++;
   }
+  rxPacks ++;
 }
 
 void ModbusRS485Slave::onGetPack(){
@@ -245,12 +243,14 @@ void ModbusRS485Slave::update(){
       onGetPack();
     }else{
       failType = ModbusRS485::RcvWaitTimedout;
+      rxFailPacks ++;
       onGetPack();
     }
     clear();
   }
   if(!ModbusRS485::update()){ //数据接收过多
     failType = ModbusRS485::RcvOverflow; //溢出
+    rxFailPacks ++;
     rxFrame.validDataLength = received;
     onGetPack();
     clear();
