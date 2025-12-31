@@ -12,6 +12,7 @@ private:
 public:
     typedef void(*ModbusRegisterSetCallback)(ModbusRegister *reg, uint16_t address, uint16_t oldData);
     typedef bool(*ModbusRegisterGetCallback)(ModbusRegister *reg, uint16_t address, uint16_t &data);
+    typedef bool(*ModbusRegisterPreSetCallback)(ModbusRegister *reg, uint16_t address, uint16_t newData);
     typedef void(*ModbusOnCustomProcess)(ModbusFrame &packIn, ModbusFrame &packOut);
 
     uint8_t* pbCoil[(pbCoilCount+7) / 8];                       //输出线圈 指针
@@ -48,8 +49,10 @@ public:
 
     ModbusRegisterGetCallback onHoldGet;
     ModbusRegisterSetCallback onHoldSet;
+	ModbusRegisterPreSetCallback onHoldPreSet;	//Make it able to reject the change of modbus register
     ModbusRegisterGetCallback onCoilGet;
     ModbusRegisterSetCallback onCoilSet;
+	ModbusRegisterPreSetCallback onCoilPreSet;	//Make it able to reject the change of modbus register
     ModbusRegisterGetCallback onDiscreteInputGet;
     ModbusRegisterSetCallback onDiscreteInputSet;
     ModbusRegisterGetCallback onInputGet;
@@ -73,8 +76,10 @@ template<ModbusRegisterConfigTemplate>
 ModbusRegister<ModbusRegisterConfigArgs>::ModbusRegister() {
     onHoldGet = 0;
     onHoldSet = 0;
+	onHoldPreSet = 0;
     onCoilGet = 0;
     onCoilSet = 0;
+	onCoilPreSet = 0;
     onDiscreteInputGet = 0;
     onInputGet = 0;
     for(uint32_t i=0;i<(pbCoilCount+7) / 8;i++) pbCoil[i] = (uint8_t*)&emptyPointer;
@@ -143,21 +148,29 @@ template<ModbusRegisterConfigTemplate>
 uint8_t ModbusRegister<ModbusRegisterConfigArgs>::setCoil(uint16_t address, uint8_t state){
     if(address < pbCoilCount){
         if(pbCoil == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Coil Register Pointer
-        uint16_t bitBlock = address/8;
-        uint8_t bitIndex = address%8;
-        uint16_t oldState = (*(pbCoil[bitBlock]) >> bitIndex)&0x01;
-        *(pbCoil[bitBlock]) &= ~(1 << bitIndex);
-        *(pbCoil[bitBlock]) |= (state << bitIndex);
-        if(onCoilSet) onCoilSet(this,address,oldState);
+		bool allowRegisterChange = true;
+		if(onCoilPreSet) allowRegisterChange = onCoilPreSet(this,address,state);
+		if(allowRegisterChange){	//Allow Register Change
+			uint16_t bitBlock = address/8;
+			uint8_t bitIndex = address%8;
+			uint16_t oldState = (*(pbCoil[bitBlock]) >> bitIndex)&0x01;
+			*(pbCoil[bitBlock]) &= ~(1 << bitIndex);
+			*(pbCoil[bitBlock]) |= (state << bitIndex);
+			if(onCoilSet) onCoilSet(this,address,oldState);
+		}
     }else if(address < pbCoilCount+bCoilCount){
         if(bCoil == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Coil Register
-        uint16_t npAddress = address-pbCoilCount;
-        uint16_t bitBlock = npAddress/8;
-        uint8_t bitIndex = npAddress%8;
-        uint16_t oldState = (bCoil[bitBlock] >> bitIndex)&0x01;
-        bCoil[bitBlock] &= ~(1 << bitIndex);
-        bCoil[bitBlock] |= (state << bitIndex);
-        if(onCoilSet) onCoilSet(this,address,oldState);
+		bool allowRegisterChange = true;
+		if(onCoilPreSet) allowRegisterChange = onCoilPreSet(this,address,state);
+		if(allowRegisterChange){	//Allow Register Change
+			uint16_t npAddress = address-pbCoilCount;
+			uint16_t bitBlock = npAddress/8;
+			uint8_t bitIndex = npAddress%8;
+			uint16_t oldState = (bCoil[bitBlock] >> bitIndex)&0x01;
+			bCoil[bitBlock] &= ~(1 << bitIndex);
+			bCoil[bitBlock] |= (state << bitIndex);
+			if(onCoilSet) onCoilSet(this,address,oldState);
+		}
     }else{
         return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     }
@@ -355,15 +368,23 @@ template<ModbusRegisterConfigTemplate>
 uint8_t ModbusRegister<ModbusRegisterConfigArgs>::setHold(uint16_t address, uint16_t data){
     if(address < pwHoldCount){
         if(pwHold == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Input Register Pointer
-        uint16_t oldData = *(pwHold[address]);
-        *(pwHold[address]) = data;
-        if(onHoldSet) onHoldSet(this,address,oldData);
+		bool allowRegisterChange = true;
+		if(onHoldPreSet) allowRegisterChange = onHoldPreSet(this,address,data);
+		if(allowRegisterChange){	//Allow Register Change
+			uint16_t oldData = *(pwHold[address]);
+			*(pwHold[address]) = data;
+			if(onHoldSet) onHoldSet(this,address,oldData);
+		}
     }else if(address < pwHoldCount+wHoldCount){
         if(wHold == 0) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;   //No Input Register
-        uint16_t npAddress = address-pwHoldCount;
-        uint16_t oldData = wHold[npAddress];
-        wHold[npAddress] = data;
-        if(onHoldSet) onHoldSet(this,address,oldData);
+		bool allowRegisterChange = true;
+		if(onHoldPreSet) allowRegisterChange = onHoldPreSet(this,address,data);
+		if(allowRegisterChange){	//Allow Register Change
+			uint16_t npAddress = address-pwHoldCount;
+			uint16_t oldData = wHold[npAddress];
+			wHold[npAddress] = data;
+			if(onHoldSet) onHoldSet(this,address,oldData);
+		}
     }else{
         return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     }

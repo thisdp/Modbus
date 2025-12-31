@@ -71,6 +71,7 @@ private:
 public:
     typedef void(*ModbusRegisterVariantSetCallback)(ModbusRegisterVariant *reg, uint16_t address, uint16_t oldData);
     typedef bool(*ModbusRegisterVariantGetCallback)(ModbusRegisterVariant *reg, uint16_t address, uint16_t &data);
+    typedef bool(*ModbusRegisterVariantPreSetCallback)(ModbusRegisterVariant *reg, uint16_t address, uint16_t newData);
     typedef void(*ModbusOnCustomProcess)(ModbusFrame &packIn, ModbusFrame &packOut);
 
     vector<RegVariant<uint8_t>> bCoil;                 //输出线圈
@@ -98,8 +99,10 @@ public:
 
     ModbusRegisterVariantGetCallback onHoldGet;
     ModbusRegisterVariantSetCallback onHoldSet;
+	ModbusRegisterVariantPreSetCallback onHoldPreSet;	//Make it able to reject the change of modbus register
     ModbusRegisterVariantGetCallback onCoilGet;
     ModbusRegisterVariantSetCallback onCoilSet;
+	ModbusRegisterVariantPreSetCallback onCoilPreSet;	//Make it able to reject the change of modbus register
     ModbusRegisterVariantGetCallback onDiscreteInputGet;
     ModbusRegisterVariantSetCallback onDiscreteInputSet;
     ModbusRegisterVariantGetCallback onInputGet;
@@ -125,8 +128,10 @@ ModbusRegisterVariant::ModbusRegisterVariant(size_t bCoilCount, size_t bDiscrete
     wHold.resize(wHoldCount);
     onHoldGet = 0;
     onHoldSet = 0;
+	onHoldPreSet = 0;
     onCoilGet = 0;
     onCoilSet = 0;
+	onCoilPreSet = 0;
     onDiscreteInputGet = 0;
     onInputGet = 0;
 }
@@ -180,11 +185,16 @@ uint8_t ModbusRegisterVariant::registerHold(uint16_t address, uint16_t &target){
 
 uint8_t ModbusRegisterVariant::setCoil(uint16_t address, uint8_t state){
     if(address >= bCoil.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
-    uint8_t tState = false;
-    if(!bCoil[address].get(tState)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
-    if(!bCoil[address].set(state)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
-    uint16_t oldState = tState;
-    if(onCoilSet) onCoilSet(this,address,oldState);
+	bool allowRegisterChange = true;
+	if(onCoilPreSet) allowRegisterChange = onCoilPreSet(this,address,state);
+	if(allowRegisterChange){	//Allow Register Change
+		uint8_t tState = false;
+		if(!bCoil[address].get(tState)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+		if(!bCoil[address].set(state)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+		uint16_t oldState = tState;
+		if(onCoilSet) onCoilSet(this,address,oldState);
+	}
+	
     return 0;
 }
 
@@ -264,10 +274,14 @@ uint16_t ModbusRegisterVariant::getInput(uint16_t address){
 
 uint8_t ModbusRegisterVariant::setHold(uint16_t address, uint16_t data){
     if(address >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
-    uint16_t oldState = 0;
-    if(!wHold[address].get(oldState)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
-    if(!wHold[address].set(data)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
-    if(onHoldSet) onHoldSet(this,address,oldState);
+	bool allowRegisterChange = true;
+	if(onHoldPreSet) allowRegisterChange = onHoldPreSet(this,address,data);
+	if(allowRegisterChange){	//Allow Register Change
+		uint16_t oldState = 0;
+		if(!wHold[address].get(oldState)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+		if(!wHold[address].set(data)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+		if(onHoldSet) onHoldSet(this,address,oldState);
+	}
     return 0;
 }
 
