@@ -98,18 +98,18 @@ void ModbusRS485Master::onGetPack(){
   if(onReceived) onReceived(this);
 }
 
-void ModbusRS485Master::begin(size_t baud, uint32_t config, int8_t rxPin, int8_t txPin, int8_t dePin, int8_t rePin, bool readBack, uint32_t pWaitSlaveTimedout){
+void ModbusRS485Master::begin(size_t baud, uint32_t config, int8_t rxPin, int8_t txPin, int8_t dePin, int8_t rePin, bool readBack, uint32_t pWaitSlaveTimedoutUs){
   RS485::begin(baud,config,rxPin,txPin,dePin,rePin,readBack);
   stopDelay = ceil(3.5*1000000.0/baud);
   sendBackDelay = stopDelay*80;
-  waitSlavePackTimedout = pWaitSlaveTimedout;
+  waitSlavePackTimedout = pWaitSlaveTimedoutUs;
 }
 
-void ModbusRS485Master::begin(RS485Config conf,uint32_t pWaitSlaveTimedout){
+void ModbusRS485Master::begin(RS485Config conf,uint32_t pWaitSlaveTimedoutUs){
   RS485::begin(conf);
   stopDelay = ceil(3.5*1000000.0/conf.baudrate);
   sendBackDelay = stopDelay*80;
-  waitSlavePackTimedout = pWaitSlaveTimedout;
+  waitSlavePackTimedout = pWaitSlaveTimedoutUs;
 }
 
 void ModbusRS485Master::update(){

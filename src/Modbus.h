@@ -89,8 +89,8 @@ protected:
 class ModbusRS485Master : public ModbusRS485 {
 public:
   ModbusRS485Master(HardwareSerial& serial, CRC16 *modbusCRC = 0);
-  void begin(size_t baud, uint32_t config = SERIAL_8N1, int8_t rxPin=-1, int8_t txPin=-1, int8_t dePin=-1, int8_t rePin = -1, bool readBack = false, uint32_t pWaitSlaveTimedout = 500*1000);
-  void begin(RS485Config conf,uint32_t pWaitSlaveTimedout = 500*1000);
+  void begin(size_t baud, uint32_t config = SERIAL_8N1, int8_t rxPin=-1, int8_t txPin=-1, int8_t dePin=-1, int8_t rePin = -1, bool readBack = false, uint32_t pWaitSlaveTimedoutUs = 500*1000);
+  void begin(RS485Config conf,uint32_t pWaitSlaveTimedoutUs = 500*1000);
   void update();
   bool availableToTransmit();
   void transmitOnUpdate(uint8_t targetStation);
