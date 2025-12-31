@@ -138,7 +138,7 @@ public:
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     _quantity = quant;
-    *bytes = (uint8_t)((quant+15)>>4)*2;
+    *bytes = (uint8_t)((quant+7)>>3);
     for(uint8_t i = 0;i<*bytes;i++) values[i] = 0;
     setEOP(((uint8_t*)values)+getBytes());
   }
@@ -158,7 +158,7 @@ public:
   inline void addValue(bool state){
     uint16_t vIndex = _quantity;
     _quantity++;
-    *bytes = (uint8_t)((_quantity+15)>>4)*2;
+    *bytes = (uint8_t)((_quantity+7)>>3);
     setValue(vIndex,state);
     setEOP(((uint8_t*)values)+getBytes());
   }
@@ -192,7 +192,7 @@ public:
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     _quantity = quant;
-    *bytes = (uint8_t)((quant+15)>>4)*2;
+    *bytes = (uint8_t)((quant+7)>>3);
     for(uint8_t i = 0;i<*bytes;i++) values[i] = 0;
     setEOP(((uint8_t*)values)+getBytes());
   }
@@ -210,10 +210,10 @@ public:
     return (values[bitBlock] >> bitIndex)&0x01;
   }
   inline void addValue(bool state){
-    //uint16_t vIndex = _quantity;
+    uint16_t vIndex = _quantity;
     _quantity++;
-    *bytes = (uint8_t)((_quantity+15)>>4)*2;
-    setValue(_quantity,state);
+    *bytes = (uint8_t)((_quantity+7)>>3);
+    setValue(vIndex,state);
     setEOP(((uint8_t*)values)+getBytes());
   }
   void pushRegisters(bool toTail, uint16_t quant, uint8_t *data);
@@ -387,7 +387,7 @@ public:
   inline uint16_t getStartAddress(){ return startAddress->get(); }
   inline uint16_t getQuantity(){ return quantity->get(); }
   inline void setStartAddress(uint16_t address) { startAddress->set(address); }
-  inline void setQuantity(uint16_t quant) { quantity->set(quant); *bytes = (uint8_t)((quant+15)>>4)*2; }
+  inline void setQuantity(uint16_t quant) { quantity->set(quant); *bytes = (uint8_t)((quant+7)>>3); }
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     setQuantity(quant);
@@ -395,16 +395,16 @@ public:
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, bool state) { 
-    uint8_t bitBlock = (atAddress>>4);
+    uint8_t bitBlock = (atAddress>>3);
     if(bitBlock >= getBytes()) return;
-    uint8_t bitIndex = atAddress&0x0F;
+    uint8_t bitIndex = atAddress&0x07;
     values[bitBlock] &= ~(1 << bitIndex);
     values[bitBlock] |= (state << bitIndex);
   }
   inline bool getValue(uint8_t atAddress){
-    uint8_t bitBlock = (atAddress>>4);
+    uint8_t bitBlock = (atAddress>>3);
     if(bitBlock >= getBytes()) return 0;
-    uint8_t bitIndex = atAddress&0x0F;
+    uint8_t bitIndex = atAddress&0x07;
     return (values[bitBlock] >> bitIndex)&0x01;
   }
   inline void addValue(bool state){

@@ -171,18 +171,20 @@ void MBPReadCoilRegisterResponse::write(Stream& s) {
     s.write((uint8_t*)values, *bytes);
 }
 void MBPReadCoilRegisterResponse::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
-    //如果添加非16的整数倍的数量，则会扩展为16的整数倍对齐
-    uint8_t deltaWords = (uint8_t)((quant+15)>>4);
-    uint8_t origWords = getBytes()/2;
-    uint8_t newWords = origWords+deltaWords;
-    uint16_t *wValues = (uint16_t *)values;
+    // 计算需要的字节数
+    uint8_t neededBytes = (uint8_t)((_quantity + quant + 7) >> 3);
+    uint8_t origBytes = getBytes();
+    uint8_t newBytes = neededBytes;
+    uint8_t *bValues = (uint8_t*)values;
     if(fromHead){  //从头部添加
-        for (int8_t i = origWords - 1; i >= 0; i--) wValues[i + deltaWords] = wValues[i];
-        for (uint8_t i = 0; i < deltaWords; i++) wValues[i] = ((uint16_t*)data)[i];
+        // 移动原有数据
+        for (int8_t i = origBytes - 1; i >= 0; i--) bValues[i + (newBytes - origBytes)] = bValues[i];
+        // 添加新数据
+        for (uint8_t i = 0; i < (newBytes - origBytes); i++) bValues[i] = data[i];
     }else{  //从末尾添加
-        for (uint8_t i = 0; i < deltaWords; i++) wValues[i+origWords] = ((uint16_t*)data)[i];
+        for (uint8_t i = 0; i < (newBytes - origBytes); i++) bValues[i + origBytes] = data[i];
     }
-    *bytes = newWords*2;
+    *bytes = newBytes;
     setEOP(((uint8_t*)values)+getBytes());
 }
 
@@ -234,18 +236,20 @@ void MBPReadDiscreteInputRegisterResponse::write(Stream& s) {
     Serial.println("Done");*/
 }
 void MBPReadDiscreteInputRegisterResponse::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
-    _quantity = getBytes() * 16; //以16为整
-    uint8_t deltaWords = (uint8_t)((quant+15)>>4);
-    uint8_t origWords = getBytes()/2;
-    uint8_t newWords = origWords+deltaWords;
-    uint16_t *wValues = (uint16_t *)values;
+    // 计算需要的字节数
+    uint8_t neededBytes = (uint8_t)((_quantity + quant + 7) >> 3);
+    uint8_t origBytes = getBytes();
+    uint8_t newBytes = neededBytes;
+    uint8_t *bValues = (uint8_t*)values;
     if(fromHead){  //从头部添加
-        for (int8_t i = origWords - 1; i >= 0; i--) wValues[i + deltaWords] = wValues[i];
-        for (uint8_t i = 0; i < deltaWords; i++) wValues[i] = ((uint16_t*)data)[i];
+        // 移动原有数据
+        for (int8_t i = origBytes - 1; i >= 0; i--) bValues[i + (newBytes - origBytes)] = bValues[i];
+        // 添加新数据
+        for (uint8_t i = 0; i < (newBytes - origBytes); i++) bValues[i] = data[i];
     }else{  //从末尾添加
-        for (uint8_t i = 0; i < deltaWords; i++) wValues[i+origWords] = ((uint16_t*)data)[i];
+        for (uint8_t i = 0; i < (newBytes - origBytes); i++) bValues[i + origBytes] = data[i];
     }
-    *bytes = newWords*2;
+    *bytes = newBytes;
     setEOP(((uint8_t*)values)+getBytes());
 }
 //读保持寄存器0x03
@@ -476,43 +480,47 @@ void MBPWriteMultipleCoilRegistersRequest::write(Stream& s) {
 }
 
 void MBPWriteMultipleCoilRegistersRequest::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
-    //如果添加非8的整数倍的数量，则会扩展为8的整数倍对齐
-    uint8_t deltaBytes = (uint8_t)((quant+15)>>4);
+    // 计算需要的字节数
+    uint16_t currentQuantity = getQuantity();
+    uint8_t neededBytes = (uint8_t)((currentQuantity + quant + 7) >> 3);
     uint8_t origBytes = *bytes;
-    uint8_t newBytes = origBytes+deltaBytes;
+    uint8_t newBytes = neededBytes;
+    uint8_t *bValues = (uint8_t*)values;
     //从byteIndex位置插入
-    for (uint8_t i = 0; i < origBytes; i++) values[i+deltaBytes] = values[i];
-    for (uint8_t i = 0; i < deltaBytes; i++) values[i] = ((uint16_t*)data)[i];
+    for (uint8_t i = 0; i < origBytes; i++) bValues[i+(newBytes-origBytes)] = bValues[i];
+    for (uint8_t i = 0; i < (newBytes-origBytes); i++) bValues[i] = data[i];
     *bytes = newBytes;
-    setQuantity(getQuantity()+quant);
+    setQuantity(currentQuantity+quant);
     setEOP(((uint8_t*)values)+getBytes());
 }
 void MBPWriteMultipleCoilRegistersRequest::popRegisters(bool fromHead, uint16_t quant) {
     uint16_t totalQuantity = getQuantity();
     if(totalQuantity <= quant) quant = totalQuantity;
     uint16_t remainQuantity = totalQuantity-quant;
-    uint8_t newValueCount = ((remainQuantity + 15) >> 4);
+    uint8_t newValueCount = (uint8_t)((remainQuantity + 7) >> 3);
     if (fromHead) {  //如果从头往后删
-        uint16_t fromWord = quant/16;
-        uint16_t fromBit = quant%16;
+        uint16_t fromByte = quant/8;
+        uint16_t fromBit = quant%8;
+        uint8_t *bValues = (uint8_t*)values;
         for (uint8_t i = 0; i < newValueCount; i++) {   //从0到newValueCount-1
-            uint16_t val = values[i+fromWord];
-            uint16_t valNext = 0;
+            uint8_t val = bValues[i+fromByte];
+            uint8_t valNext = 0;
             if(i+1 < newValueCount){
-                valNext = values[i+1+fromWord];
+                valNext = bValues[i+1+fromByte];
             }
             val = val >> fromBit;
-            val = val | ((valNext & (0xFFFF >> fromBit)) << (16-fromBit));
-            values[i] = val;
+            val = val | ((valNext & (0xFF >> fromBit)) << (8-fromBit));
+            bValues[i] = val;
         }
     }else{  //从末尾往前删
-        uint16_t val = values[newValueCount - 1];
-        uint8_t remainDecreaseQuant = remainQuantity % 16;  //清除剩余的位
-        val = val & (0xFFFF >> (16-remainDecreaseQuant)); //移除高位数据
-        values[newValueCount - 1] = val;
+        uint8_t *bValues = (uint8_t*)values;
+        uint8_t val = bValues[newValueCount - 1];
+        uint8_t remainDecreaseQuant = remainQuantity % 8;  //清除剩余的位
+        val = val & (0xFF >> (8-remainDecreaseQuant)); //移除高位数据
+        bValues[newValueCount - 1] = val;
         // 不需要改变起始地址
     }
-    *bytes = newValueCount*2;
+    *bytes = newValueCount;
     setQuantity(remainQuantity);
     setEOP(((uint8_t*)values)+getBytes());
 }
