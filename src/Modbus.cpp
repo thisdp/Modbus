@@ -295,7 +295,3 @@ bool ModbusRS485Slave::setStation(uint8_t newStation){
   station = newStation;
   return true;
 }
-
-uint8_t ModbusRS485Slave::getStation(){
-  return station;
-}
