@@ -119,6 +119,7 @@ public:
   void processPack();
   uint8_t getStation();
   bool setStation(uint8_t station);
+  uint8_t getStation();
 private:
   void onGetPack();
   bool transmitOnUpdateFlag;
