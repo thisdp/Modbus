@@ -20,9 +20,7 @@ public:
   
   ModbusCallbackOnReceived onReceived;
   uint32_t stopDelay;
-  uint32_t timeOut;
-  uint32_t sendBackStartTick;
-  uint32_t sendBackDelay;
+  uint32_t timeOut; //Pack Receive Timeout
 
   uint32_t lastTick;
   uint32_t rxFailPacks;
@@ -31,6 +29,8 @@ public:
   uint16_t received;
   uint8_t state;
   uint8_t failType;
+
+  bool debugReadPrint;
 
   ModbusFrame txFrame;
   ModbusFrame rxFrame;
@@ -45,6 +45,8 @@ public:
   void clearStatics();
   inline bool isStationValid(uint8_t st){ return st >= 1 && st <= 247; }
   
+  inline void setDebugReadPrintEnabled(bool argDebugReadPrint){ debugReadPrint = argDebugReadPrint; }
+  inline bool isDebugReadPrintEnabled(){ return debugReadPrint; }
   // 获取计数器的函数
   inline uint32_t getTxPacks(){ return txPacks; }
   inline uint32_t getRxPacks(){ return rxPacks; }
@@ -75,14 +77,9 @@ protected:
     if(micros()-lastTick > timeOut) return true;
     return false;
   }
-  inline bool isSendBackDelayComplete(){
-    if(micros()-sendBackStartTick > sendBackDelay)
-      return true;
-    else
-      return false;
-  }
   inline void setReceiveWaitTimedout(){
     failType = RcvWaitTimedout;
+    rxFailPacks ++;
   }
 };
 
