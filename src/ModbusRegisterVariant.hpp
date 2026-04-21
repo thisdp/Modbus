@@ -271,6 +271,13 @@ uint8_t ModbusRegisterVariant::getInput(uint16_t address, uint16_t &data){
     return 0;
 }
 
+uint8_t ModbusRegisterVariant::getInput(uint16_t address, uint32_t &data){ 
+    uint16_t dataU16;
+    uint8_t result = this->getInput(address, dataU16);
+    data = dataU16;
+    return result;
+}
+
 uint16_t ModbusRegisterVariant::getInput(uint16_t address){
     uint16_t state = 0;
     this->getInput(address, state);
@@ -309,6 +316,13 @@ uint8_t ModbusRegisterVariant::getHold(uint16_t address, uint16_t &data){
     }
     data = u16State;
     return 0;
+}
+
+uint8_t ModbusRegisterVariant::getHold(uint16_t address, uint32_t &data){
+    uint16_t dataU16;
+    uint8_t result = this->getHold(address, dataU16);
+    data = dataU16;
+    return result;
 }
 
 uint16_t ModbusRegisterVariant::getHold(uint16_t address){

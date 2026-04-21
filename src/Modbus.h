@@ -21,6 +21,9 @@ public:
   ModbusCallbackOnReceived onReceived;
   uint32_t stopDelay;
   uint32_t timeOut; //Pack Receive Timeout
+  uint32_t sendBackStartTick;
+  uint32_t sendBackDelay;
+  float sendBackDelayRatio;
 
   uint32_t lastTick;
   uint32_t rxFailPacks;
@@ -38,6 +41,7 @@ public:
   ModbusRS485(HardwareSerial& serial, CRC16 *modbusCRC = 0);
   bool update();
   void clear();
+  inline void setSendBackDelayRatio(float ratio){ sendBackDelayRatio = ratio; }
   void setStopDelay(uint32_t argStopDelay);
   void setReceiveTimeOut(uint32_t argTime);
   void printFailType(Stream& stream);
@@ -77,6 +81,12 @@ protected:
     if(micros()-lastTick > timeOut) return true;
     return false;
   }
+  inline bool isSendBackDelayComplete(){
+    if(micros()-sendBackStartTick > sendBackDelay)
+      return true;
+    else
+      return false;
+  }
   inline void setReceiveWaitTimedout(){
     failType = RcvWaitTimedout;
     rxFailPacks ++;
@@ -86,8 +96,10 @@ protected:
 class ModbusRS485Master : public ModbusRS485 {
 public:
   ModbusRS485Master(HardwareSerial& serial, CRC16 *modbusCRC = 0);
-  void begin(size_t baud, uint32_t config = SERIAL_8N1, int8_t rxPin=-1, int8_t txPin=-1, int8_t dePin=-1, int8_t rePin = -1, bool readBack = false, uint32_t pWaitSlaveTimedoutUs = 500*1000);
-  void begin(RS485Config conf,uint32_t pWaitSlaveTimedoutUs = 500*1000);
+  void begin(size_t baud, uint32_t config, int8_t rxPin, int8_t txPin, int8_t dePin, int8_t rePin, bool readBack, uint32_t pWaitSlaveTimedoutUs);
+  void begin(size_t baud, uint32_t config = SERIAL_8N1, int8_t rxPin=-1, int8_t txPin=-1, int8_t dePin=-1, int8_t rePin = -1, bool readBack = false);
+  void begin(RS485Config conf,uint32_t pWaitSlaveTimedoutUs);
+  void begin(RS485Config conf);
   void update();
   bool availableToTransmit();
   void transmitOnUpdate(uint8_t targetStation);

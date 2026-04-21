@@ -179,9 +179,7 @@ void MBPReadCoilRegisterResponse::pushRegisters(bool fromHead, uint16_t quant, u
     uint8_t deltaBytes = newBytes - origBytes;
     uint8_t *bValues = (uint8_t*)values;
     if(fromHead){  //从头部添加
-        // 移动原有数据（允许重叠）
         memmove(bValues + deltaBytes, bValues, origBytes);
-        // 添加新数据
         memcpy(bValues, data, deltaBytes);
     }else{  //从末尾添加
         memcpy(bValues + origBytes, data, deltaBytes);

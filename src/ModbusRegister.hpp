@@ -34,9 +34,11 @@ public:
     uint8_t getDiscreteInput(uint16_t address);
     uint8_t setInput(uint16_t address, uint16_t data);
     uint8_t getInput(uint16_t address, uint16_t &data);
+    uint8_t getInput(uint16_t address, uint32_t &data);
     uint16_t getInput(uint16_t address);
     uint8_t setHold(uint16_t address, uint16_t data);
     uint8_t getHold(uint16_t address, uint16_t &data);
+    uint8_t getHold(uint16_t address, uint32_t &data);
     uint16_t getHold(uint16_t address);
     inline void setHoldFast(uint16_t address, uint16_t data);
     inline void getHoldFast(uint16_t address, uint16_t &data);
@@ -358,6 +360,14 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getInput(uint16_t address, uin
 }
 
 template<ModbusRegisterConfigTemplate>
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getInput(uint16_t address, uint32_t &data){
+    uint16_t dataU16;
+    uint8_t result = this->getInput(address, dataU16);
+    data = dataU16;
+    return result;
+}
+
+template<ModbusRegisterConfigTemplate>
 uint16_t ModbusRegister<ModbusRegisterConfigArgs>::getInput(uint16_t address){
     uint16_t state = 0;
     this->getInput(address, state);
@@ -434,6 +444,14 @@ uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getHold(uint16_t address, uint
         return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     }
     return 0;
+}
+
+template<ModbusRegisterConfigTemplate>
+uint8_t ModbusRegister<ModbusRegisterConfigArgs>::getHold(uint16_t address, uint32_t &data){ 
+    uint16_t dataU16;
+    uint8_t result = this->getHold(address, dataU16);
+    data = dataU16;
+    return result;
 }
 
 template<ModbusRegisterConfigTemplate>

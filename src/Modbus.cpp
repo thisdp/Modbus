@@ -10,6 +10,7 @@ ModbusRS485::ModbusRS485(HardwareSerial& serial, CRC16 *modbusCRC): RS485(serial
   rxPacks = 0;
   txPacks = 0;
   debugReadPrint = false;
+  setSendBackDelayRatio(10.0);
   clear();
 }
 
@@ -78,7 +79,9 @@ void ModbusRS485::clearStatics(){
 }
 
 /*Modbus Master*/
-ModbusRS485Master::ModbusRS485Master(HardwareSerial& serial, CRC16 *modbusCRC) : ModbusRS485(serial,modbusCRC){}
+ModbusRS485Master::ModbusRS485Master(HardwareSerial& serial, CRC16 *modbusCRC) : ModbusRS485(serial,modbusCRC){
+  waitSlavePackTimedout = 100*1000;
+}
 
 void ModbusRS485Master::processPack(){
   if(rxFrame.castResponse()){
@@ -99,20 +102,30 @@ void ModbusRS485Master::onGetPack(){
   if(onReceived) onReceived(this);
 }
 
-void ModbusRS485Master::begin(size_t baud, uint32_t config, int8_t rxPin, int8_t txPin, int8_t dePin, int8_t rePin, bool readBack, uint32_t pWaitSlaveTimedoutUs){
+void ModbusRS485Master::begin(size_t baud, uint32_t config, int8_t rxPin, int8_t txPin, int8_t dePin, int8_t rePin, bool readBack){
   RS485::begin(baud,config,rxPin,txPin,dePin,rePin,readBack);
   stopDelay = ceil(3.5*1000000.0/baud);
+  sendBackDelay = (uint32_t)(stopDelay*sendBackDelayRatio);
+}
+
+void ModbusRS485Master::begin(size_t baud, uint32_t config, int8_t rxPin, int8_t txPin, int8_t dePin, int8_t rePin, bool readBack, uint32_t pWaitSlaveTimedoutUs){
+  begin(baud, config, rxPin, txPin, dePin, rePin, readBack);
   waitSlavePackTimedout = pWaitSlaveTimedoutUs;
 }
 
-void ModbusRS485Master::begin(RS485Config conf,uint32_t pWaitSlaveTimedoutUs){
+void ModbusRS485Master::begin(RS485Config conf){
   RS485::begin(conf);
   stopDelay = ceil(3.5*1000000.0/conf.baudrate);
+  sendBackDelay = (uint32_t)(stopDelay*sendBackDelayRatio);
+}
+
+void ModbusRS485Master::begin(RS485Config conf,uint32_t pWaitSlaveTimedoutUs){
+  begin(conf);
   waitSlavePackTimedout = pWaitSlaveTimedoutUs;
 }
 
 void ModbusRS485Master::update(){
-  if(transmitOnUpdateFlag){
+  if(transmitOnUpdateFlag && isSendBackDelayComplete()){
     transmit(transmitTargetStation);
     transmitTargetStation = 0;
     transmitOnUpdateFlag = false;
@@ -160,6 +173,7 @@ bool ModbusRS485Master::availableToTransmit(){
 void ModbusRS485Master::transmitOnUpdate(uint8_t targetStation){
   transmitTargetStation = targetStation;
   transmitOnUpdateFlag = true;
+  sendBackStartTick = micros();
 }
 
 bool ModbusRS485Master::transmit(uint8_t targetStation){
@@ -210,16 +224,18 @@ void ModbusRS485Slave::begin(uint8_t pStation, size_t baud, uint32_t config, int
   RS485::begin(baud,config,rxPin,txPin,dePin,rePin,readBack);
   station = pStation;
   stopDelay = ceil(3.5*1000000.0/baud);
+  sendBackDelay = (uint32_t)(stopDelay*sendBackDelayRatio);
 }
 
 void ModbusRS485Slave::begin(uint8_t pStation,RS485Config conf){
   RS485::begin(conf);
   station = pStation;
   stopDelay = ceil(3.5*1000000.0/conf.baudrate);
+  sendBackDelay = (uint32_t)(stopDelay*sendBackDelayRatio);
 }
 
 void ModbusRS485Slave::update(){
-  if(transmitOnUpdateFlag){
+  if(transmitOnUpdateFlag && isSendBackDelayComplete()){
     //Serial.println("Send on update");
     if(availableToTransmit()){
       transmit();
