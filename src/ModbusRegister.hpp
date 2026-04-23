@@ -69,7 +69,7 @@ public:
     uint8_t registerHold(uint16_t address, uint16_t *target);
     uint8_t registerHold(uint16_t address, uint16_t &target);
 
-    uint8_t process(ModbusFrame &packIn, ModbusFrame &packOut);
+    uint8_t process(ModbusFrame &frameRequest, ModbusFrame &frameResponse);
     uint8_t processResponse(ModbusFrame &frameResponse, ModbusFrame &frameRequest);
 };
 

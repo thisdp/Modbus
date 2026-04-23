@@ -122,7 +122,7 @@ public:
     uint8_t registerDiscreteInput(uint16_t address, uint8_t &memAddress);
     uint8_t registerInput(uint16_t address, uint16_t &memAddress);
     uint8_t registerHold(uint16_t address, uint16_t &memAddress);
-    uint8_t process(ModbusFrame &packIn, ModbusFrame &packOut);
+    uint8_t process(ModbusFrame &frameRequest, ModbusFrame &frameResponse);
     uint8_t processResponse(ModbusFrame &frameResponse, ModbusFrame &frameRequest);
 };
 
