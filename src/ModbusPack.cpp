@@ -493,31 +493,42 @@ void MBPWriteMultipleCoilRegistersRequest::pushRegisters(bool fromHead, uint16_t
 }
 void MBPWriteMultipleCoilRegistersRequest::popRegisters(bool fromHead, uint16_t quant) {
     uint16_t totalQuantity = getQuantity();
-    if(totalQuantity <= quant) quant = totalQuantity;
-    uint16_t remainQuantity = totalQuantity-quant;
-    uint8_t newValueCount = (uint8_t)((remainQuantity + 7) >> 3);
-    if (fromHead) {  //如果从头往后删
-        uint16_t fromByte = quant/8;
-        uint16_t fromBit = quant%8;
-        uint8_t *bValues = (uint8_t*)values;
-        for (uint8_t i = 0; i < newValueCount; i++) {   //从0到newValueCount-1
-            uint8_t val = bValues[i+fromByte];
-            uint8_t valNext = 0;
-            if(i+1 < newValueCount){
-                valNext = bValues[i+1+fromByte];
-            }
-            val = val >> fromBit;
-            val = val | ((valNext & (0xFF >> fromBit)) << (8-fromBit));
-            bValues[i] = val;
-        }
-    }else{  //从末尾往前删
-        uint8_t *bValues = (uint8_t*)values;
-        uint8_t val = bValues[newValueCount - 1];
-        uint8_t remainDecreaseQuant = remainQuantity % 8;  //清除剩余的位
-        val = val & (0xFF >> (8-remainDecreaseQuant)); //移除高位数据
-        bValues[newValueCount - 1] = val;
-        // 不需要改变起始地址
+    if (quant == 0 || totalQuantity == 0) return;
+    if (quant >= totalQuantity) {
+        *bytes = 0;
+        setQuantity(0);
+        setEOP(((uint8_t*)values)+getBytes());
+        return;
     }
+
+    uint16_t remainQuantity = totalQuantity - quant;
+    uint8_t oldValueCount = *bytes;
+    uint8_t newValueCount = (uint8_t)((remainQuantity + 7) >> 3);
+    uint8_t *bValues = (uint8_t*)values;
+
+    if (fromHead) {  // 如果从头往后删
+        uint16_t fromByte = (uint16_t)(quant >> 3);
+        uint8_t fromBit = (uint8_t)(quant & 0x07);
+
+        if (fromBit == 0) {
+            memmove(bValues, bValues + fromByte, newValueCount);
+        } else {
+            uint8_t lShift = (uint8_t)(8 - fromBit);
+            for (uint8_t i = 0; i < newValueCount; i++) {
+                uint16_t srcIndex = (uint16_t)(i + fromByte);
+                uint8_t cur = (uint8_t)(bValues[srcIndex] >> fromBit);
+                uint8_t next = (srcIndex + 1 < oldValueCount) ? bValues[srcIndex + 1] : 0;
+                bValues[i] = (uint8_t)(cur | (uint8_t)(next << lShift));
+            }
+        }
+    }
+
+    // 清理最后一个字节的无效高位（fromHead/fromTail 通用）
+    uint8_t remainBits = (uint8_t)(remainQuantity & 0x07);
+    if (remainBits != 0 && newValueCount > 0) {
+        bValues[newValueCount - 1] &= (uint8_t)((1u << remainBits) - 1u);
+    }
+
     *bytes = newValueCount;
     setQuantity(remainQuantity);
     setEOP(((uint8_t*)values)+getBytes());

@@ -102,20 +102,20 @@ void ModbusRS485Master::onGetPack(){
   if(onReceived) onReceived(this);
 }
 
-void ModbusRS485Master::begin(size_t baud, uint32_t config, int8_t rxPin, int8_t txPin, int8_t dePin, int8_t rePin, bool readBack){
+void ModbusRS485Master::begin(size_t baud, uint32_t config, int16_t rxPin, int16_t txPin, int16_t dePin, int16_t rePin, bool readBack){
   RS485::begin(baud,config,rxPin,txPin,dePin,rePin,readBack);
-  stopDelay = ceil(3.5*1000000.0/baud);
+  setStopDelay(ceil(3.5*1000000.0/baud));
   sendBackDelay = (uint32_t)(stopDelay*sendBackDelayRatio);
 }
 
-void ModbusRS485Master::begin(size_t baud, uint32_t config, int8_t rxPin, int8_t txPin, int8_t dePin, int8_t rePin, bool readBack, uint32_t pWaitSlaveTimedoutUs){
+void ModbusRS485Master::begin(size_t baud, uint32_t config, int16_t rxPin, int16_t txPin, int16_t dePin, int16_t rePin, bool readBack, uint32_t pWaitSlaveTimedoutUs){
   begin(baud, config, rxPin, txPin, dePin, rePin, readBack);
   waitSlavePackTimedout = pWaitSlaveTimedoutUs;
 }
 
 void ModbusRS485Master::begin(RS485Config conf){
   RS485::begin(conf);
-  stopDelay = ceil(3.5*1000000.0/conf.baudrate);
+  setStopDelay(ceil(3.5*1000000.0/conf.baudrate));
   sendBackDelay = (uint32_t)(stopDelay*sendBackDelayRatio);
 }
 
@@ -220,17 +220,17 @@ void ModbusRS485Slave::onGetPack(){
   if(onReceived) onReceived(this);
 }
 
-void ModbusRS485Slave::begin(uint8_t pStation, size_t baud, uint32_t config, int8_t rxPin, int8_t txPin, int8_t dePin, int8_t rePin, bool readBack){
+void ModbusRS485Slave::begin(uint8_t pStation, size_t baud, uint32_t config, int16_t rxPin, int16_t txPin, int16_t dePin, int16_t rePin, bool readBack){
   RS485::begin(baud,config,rxPin,txPin,dePin,rePin,readBack);
   station = pStation;
-  stopDelay = ceil(3.5*1000000.0/baud);
+  setStopDelay(ceil(3.5*1000000.0/baud));
   sendBackDelay = (uint32_t)(stopDelay*sendBackDelayRatio);
 }
 
 void ModbusRS485Slave::begin(uint8_t pStation,RS485Config conf){
   RS485::begin(conf);
   station = pStation;
-  stopDelay = ceil(3.5*1000000.0/conf.baudrate);
+  setStopDelay(ceil(3.5*1000000.0/conf.baudrate));
   sendBackDelay = (uint32_t)(stopDelay*sendBackDelayRatio);
 }
 

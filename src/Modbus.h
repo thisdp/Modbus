@@ -96,8 +96,8 @@ protected:
 class ModbusRS485Master : public ModbusRS485 {
 public:
   ModbusRS485Master(HardwareSerial& serial, CRC16 *modbusCRC = 0);
-  void begin(size_t baud, uint32_t config, int8_t rxPin, int8_t txPin, int8_t dePin, int8_t rePin, bool readBack, uint32_t pWaitSlaveTimedoutUs);
-  void begin(size_t baud, uint32_t config = SERIAL_8N1, int8_t rxPin=-1, int8_t txPin=-1, int8_t dePin=-1, int8_t rePin = -1, bool readBack = false);
+  void begin(size_t baud, uint32_t config, int16_t rxPin, int16_t txPin, int16_t dePin, int16_t rePin, bool readBack, uint32_t pWaitSlaveTimedoutUs);
+  void begin(size_t baud, uint32_t config = SERIAL_8N1, int16_t rxPin=-1, int16_t txPin=-1, int16_t dePin=-1, int16_t rePin = -1, bool readBack = false);
   void begin(RS485Config conf,uint32_t pWaitSlaveTimedoutUs);
   void begin(RS485Config conf);
   void update();
@@ -118,7 +118,7 @@ private:
 class ModbusRS485Slave : public ModbusRS485 {
 public:
   ModbusRS485Slave(HardwareSerial& serial, CRC16 *modbusCRC = 0);
-  void begin(uint8_t station, size_t baud, uint32_t config = SERIAL_8N1, int8_t rxPin=-1, int8_t txPin=-1, int8_t dePin=-1, int8_t rePin = -1, bool readBack = false);
+  void begin(uint8_t station, size_t baud, uint32_t config = SERIAL_8N1, int16_t rxPin=-1, int16_t txPin=-1, int16_t dePin=-1, int16_t rePin = -1, bool readBack = false);
   void begin(uint8_t station, RS485Config conf);
   void update();
   bool availableToTransmit();
