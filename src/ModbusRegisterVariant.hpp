@@ -390,13 +390,15 @@ inline void ModbusRegisterVariant::getHoldFloatFast(uint16_t address, float &dat
     pWords[1] = high;  // 高16位
 }
 
-uint8_t ModbusRegisterVariant::process(ModbusFrame &frameIn, ModbusFrame &frameOut){
+//Use this if it is slave, request pack is from master
+//Read request pack, collect data from modbus register space and assemble response pack
+uint8_t ModbusRegisterVariant::process(ModbusFrame &frameRequest, ModbusFrame &frameResponse){
     uint8_t result = 0;
-    if(!frameOut.createResponse(frameIn.pack->getFunctionCode())) return 0;
-    switch(frameIn.pack->getFunctionCode()){
+    if(!frameResponse.createResponse(frameRequest.pack->getFunctionCode())) return 0;
+    switch(frameRequest.pack->getFunctionCode()){
     case MBPReadCoilRegisterRequest::FunctionCode: {
-        MBPReadCoilRegisterRequest *pIn = (MBPReadCoilRegisterRequest *)(frameIn.pack);
-        MBPReadCoilRegisterResponse *pOut = (MBPReadCoilRegisterResponse *)(frameOut.pack);
+        MBPReadCoilRegisterRequest *pIn = (MBPReadCoilRegisterRequest *)(frameRequest.pack);
+        MBPReadCoilRegisterResponse *pOut = (MBPReadCoilRegisterResponse *)(frameResponse.pack);
         #ifdef DEBUG_MODBUS_ON
         Serial.println("读线圈");
         #endif
@@ -411,8 +413,8 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameIn, ModbusFrame &frameO
         break;
     }
     case MBPReadDiscreteInputRegisterRequest::FunctionCode: {
-        MBPReadDiscreteInputRegisterRequest *pIn = (MBPReadDiscreteInputRegisterRequest *)(frameIn.pack);
-        MBPReadDiscreteInputRegisterResponse *pOut = (MBPReadDiscreteInputRegisterResponse *)(frameOut.pack);
+        MBPReadDiscreteInputRegisterRequest *pIn = (MBPReadDiscreteInputRegisterRequest *)(frameRequest.pack);
+        MBPReadDiscreteInputRegisterResponse *pOut = (MBPReadDiscreteInputRegisterResponse *)(frameResponse.pack);
         #ifdef DEBUG_MODBUS_ON
         Serial.println("读离散输入");
         #endif
@@ -427,8 +429,8 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameIn, ModbusFrame &frameO
         break;
     }
     case MBPReadHoldingRegisterRequest::FunctionCode: {
-        MBPReadHoldingRegisterRequest *pIn = (MBPReadHoldingRegisterRequest *)(frameIn.pack);
-        MBPReadHoldingRegisterResponse *pOut = (MBPReadHoldingRegisterResponse *)(frameOut.pack);
+        MBPReadHoldingRegisterRequest *pIn = (MBPReadHoldingRegisterRequest *)(frameRequest.pack);
+        MBPReadHoldingRegisterResponse *pOut = (MBPReadHoldingRegisterResponse *)(frameResponse.pack);
         #ifdef DEBUG_MODBUS_ON
         Serial.println("读保持寄存器");
         #endif
@@ -442,8 +444,8 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameIn, ModbusFrame &frameO
         break;
     }
     case MBPReadInputRegisterRequest::FunctionCode: {
-        MBPReadInputRegisterRequest *pIn = (MBPReadInputRegisterRequest *)(frameIn.pack);
-        MBPReadInputRegisterResponse *pOut = (MBPReadInputRegisterResponse *)(frameOut.pack);
+        MBPReadInputRegisterRequest *pIn = (MBPReadInputRegisterRequest *)(frameRequest.pack);
+        MBPReadInputRegisterResponse *pOut = (MBPReadInputRegisterResponse *)(frameResponse.pack);
         #ifdef DEBUG_MODBUS_ON
         Serial.println("读输入寄存器");
         #endif
@@ -458,8 +460,8 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameIn, ModbusFrame &frameO
         break;
     }
     case MBPWriteCoilRegisterRequest::FunctionCode: {
-        MBPWriteCoilRegisterRequest *pIn = (MBPWriteCoilRegisterRequest *)(frameIn.pack);
-        MBPWriteCoilRegisterResponse *pOut = (MBPWriteCoilRegisterResponse *)(frameOut.pack);
+        MBPWriteCoilRegisterRequest *pIn = (MBPWriteCoilRegisterRequest *)(frameRequest.pack);
+        MBPWriteCoilRegisterResponse *pOut = (MBPWriteCoilRegisterResponse *)(frameResponse.pack);
         uint16_t startAddress = pIn->getStartAddress();
         #ifdef DEBUG_MODBUS_ON
         Serial.println("写单线圈开始");
@@ -476,8 +478,8 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameIn, ModbusFrame &frameO
         break;
     }
     case MBPWriteHoldingRegisterRequest::FunctionCode: {
-        MBPWriteHoldingRegisterRequest *pIn = (MBPWriteHoldingRegisterRequest *)(frameIn.pack);
-        MBPWriteHoldingRegisterResponse *pOut = (MBPWriteHoldingRegisterResponse *)(frameOut.pack);
+        MBPWriteHoldingRegisterRequest *pIn = (MBPWriteHoldingRegisterRequest *)(frameRequest.pack);
+        MBPWriteHoldingRegisterResponse *pOut = (MBPWriteHoldingRegisterResponse *)(frameResponse.pack);
         uint16_t startAddress = pIn->getStartAddress();
         #ifdef DEBUG_MODBUS_ON
         Serial.println("写单保持寄存器开始");
@@ -493,8 +495,8 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameIn, ModbusFrame &frameO
         break;
     }
     case MBPWriteMultipleCoilRegistersRequest::FunctionCode: {
-        MBPWriteMultipleCoilRegistersRequest *pIn = (MBPWriteMultipleCoilRegistersRequest *)(frameIn.pack);
-        MBPWriteMultipleCoilRegistersResponse *pOut = (MBPWriteMultipleCoilRegistersResponse *)(frameOut.pack);
+        MBPWriteMultipleCoilRegistersRequest *pIn = (MBPWriteMultipleCoilRegistersRequest *)(frameRequest.pack);
+        MBPWriteMultipleCoilRegistersResponse *pOut = (MBPWriteMultipleCoilRegistersResponse *)(frameResponse.pack);
         uint16_t startAddress = pIn->getStartAddress();
         if((pIn->getQuantity()+7)/8 != pIn->getBytes()){
             result = MBPDiagnose::DiagnoseCode_InvalidDataValue;
@@ -520,8 +522,8 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameIn, ModbusFrame &frameO
         break;
     }
     case MBPWriteMultipleHoldingRegistersRequest::FunctionCode: {
-        MBPWriteMultipleHoldingRegistersRequest *pIn = (MBPWriteMultipleHoldingRegistersRequest *)(frameIn.pack);
-        MBPWriteMultipleHoldingRegistersResponse *pOut = (MBPWriteMultipleHoldingRegistersResponse *)(frameOut.pack);
+        MBPWriteMultipleHoldingRegistersRequest *pIn = (MBPWriteMultipleHoldingRegistersRequest *)(frameRequest.pack);
+        MBPWriteMultipleHoldingRegistersResponse *pOut = (MBPWriteMultipleHoldingRegistersResponse *)(frameResponse.pack);
         uint16_t startAddress = pIn->getStartAddress();
         if(pIn->getQuantity()*2 != pIn->getBytes()){
             result = MBPDiagnose::DiagnoseCode_InvalidDataValue;
@@ -553,13 +555,15 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameIn, ModbusFrame &frameO
         #ifdef DEBUG_MODBUS_ON
         Serial.println("发送错误回包");
         #endif
-        frameOut.createDiagnose(frameIn.pack->getFunctionCode());
-        MBPDiagnose *pOutDiag = (MBPDiagnose *)(frameOut.pack);
+        frameResponse.createDiagnose(frameRequest.pack->getFunctionCode());
+        MBPDiagnose *pOutDiag = (MBPDiagnose *)(frameResponse.pack);
         pOutDiag->setDiagnoseCode(result);
     }
     return result;
 }
 
+//Use this if it is master, response pack is from slave
+//Read response pack using request pack as index ( Because reponse pack may not include index data )
 uint8_t ModbusRegisterVariant::processResponse(ModbusFrame &frameResponse, ModbusFrame &frameRequest){
     uint8_t result = 0;
     if(frameResponse.pack->getFunctionCode() != frameRequest.pack->getFunctionCode()) return 253;
