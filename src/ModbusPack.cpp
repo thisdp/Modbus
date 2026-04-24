@@ -82,18 +82,22 @@ uint8_t* ModbusFrame::createDiagnose(uint8_t functionCode) {
 bool ModbusFrame::verifyCRC(){
     crcMgr->clear();
     crc = (uint16_t*)(pack->endOfPack);
-    crcMgr->update(station,(((int)crc)-((int)station)));
-    return crcMgr->get() == *crc;
+    uint8_t *pCRC = (uint8_t*)crc;
+    crcMgr->update(station, (uint16_t)(pCRC - station));
+    uint16_t frameCRC = (uint16_t)pCRC[0] | ((uint16_t)pCRC[1] << 8);
+    return crcMgr->get() == frameCRC;
 }
 
 void ModbusFrame::applyCRC(){
     crcMgr->clear();
     crc = (uint16_t*)(pack->endOfPack);
-    crcMgr->update(station,(((int)crc)-((int)station)));
-    *crc = crcMgr->get();
+    uint8_t *pCRC = (uint8_t*)crc;
+    crcMgr->update(station, (uint16_t)(pCRC - station));
+    setCRC(crcMgr->get());
 }
 
 void ModbusFrame::write(Stream &s){
+    crc = (uint16_t*)(pack->endOfPack);
     s.write((uint8_t*)station, 1);
     pack->write(s);
     s.write((uint8_t*)crc, 2);
@@ -458,7 +462,7 @@ uint8_t* MBPWriteMultipleCoilRegistersRequest::cast(uint8_t *pBuffer, bool isNew
     pBuffer += sizeof(uint16_modbus);
     bytes = pBuffer;
     pBuffer += sizeof(uint8_t);
-    values = (uint16_t*)pBuffer;
+    values = (uint8_t*)pBuffer;
     if(isNew){  //Initialize Pack
         setStartAddress(0);
         initValues(0);

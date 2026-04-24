@@ -88,9 +88,11 @@ public:
     uint8_t getDiscreteInput(uint16_t address);
     uint8_t setInput(uint16_t address, uint16_t data);
     uint8_t getInput(uint16_t address, uint16_t &data);
+    uint8_t getInput(uint16_t address, uint32_t &data);
     uint16_t getInput(uint16_t address);
     uint8_t setHold(uint16_t address, uint16_t data);
     uint8_t getHold(uint16_t address, uint16_t &data);
+    uint8_t getHold(uint16_t address, uint32_t &data);
     uint16_t getHold(uint16_t address);
     inline void setHoldFast(uint16_t address, uint16_t data);
     inline void getHoldFast(uint16_t address, uint16_t &data);

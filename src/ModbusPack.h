@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <string.h>
 #include "CRC16.h"
 
 extern CRC16 gModbusCRC;
@@ -71,7 +72,15 @@ public:
 
     inline uint8_t getStation(){ return *station; }
     inline uint8_t getFunctionCode() { return *(station+1); }
-    inline uint16_t getCRC(){ crc = (uint16_t*)(pack->endOfPack); return *crc; }
+    inline uint16_t getCRC(){
+      uint8_t *pCRC = (uint8_t*)crc;
+      return (uint16_t)pCRC[0] | ((uint16_t)pCRC[1] << 8);
+    }
+    inline void setCRC(uint16_t value){
+      uint8_t *pCRC = (uint8_t*)crc;
+      pCRC[0] = (uint8_t)(value & 0xFF);
+      pCRC[1] = (uint8_t)(value >> 8);
+    }
     inline uint8_t *getEOP() { return (pack != 0 ? pack->getEOP() : 0);}
     
     inline void print(Stream &s){
@@ -139,7 +148,7 @@ public:
   inline void initValues(uint16_t quant){
     _quantity = quant;
     *bytes = (uint8_t)((quant+7)>>3);
-    for(uint8_t i = 0;i<*bytes;i++) values[i] = 0;
+    memset(values, 0, *bytes);
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, bool state) { 
@@ -193,7 +202,7 @@ public:
   inline void initValues(uint16_t quant){
     _quantity = quant;
     *bytes = (uint8_t)((quant+7)>>3);
-    for(uint8_t i = 0;i<*bytes;i++) values[i] = 0;
+    memset(values, 0, *bytes);
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, bool state) { 
@@ -246,7 +255,7 @@ public:
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     *bytes = (uint8_t)(quant*2);
-    for(uint8_t i = 0;i<*bytes;i++) values[i] = 0;
+    memset(values, 0, *bytes);
     setEOP(((uint8_t*)values)+getBytes());
     _quantity = quant;
   }
@@ -295,7 +304,7 @@ public:
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     *bytes = (uint8_t)(quant*2);
-    for(uint8_t i = 0;i<*bytes;i++) values[i] = 0;
+    memset(values, 0, *bytes);
     setEOP(((uint8_t*)values)+getBytes());
     _quantity = quant;
   }
@@ -381,7 +390,7 @@ public:
   uint16_modbus *startAddress;
   uint16_modbus *quantity;
   uint8_t *bytes;
-  uint16_t *values; //虽然Modbus是大端字节序，但是线圈寄存器还是按照小端排序，因此可以直接使用uint16_t
+  uint8_t *values;  //虽然Modbus是大端字节序，但是线圈寄存器还是按照小端排序
   uint8_t *cast(uint8_t *buf, bool isNew = false);
   void write(Stream &s);
   inline uint16_t getStartAddress(){ return startAddress->get(); }
@@ -391,7 +400,7 @@ public:
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     setQuantity(quant);
-    for(uint8_t i = 0;i<getBytes()/2;i++) values[i] = 0;
+    memset(values, 0, getBytes());
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, bool state) { 
@@ -449,7 +458,7 @@ public:
   inline void initValues(uint16_t quant){
     setQuantity(quant);
     *bytes = (uint8_t)(quant*2);
-    for(uint8_t i = 0;i<*bytes;i++) values[i] = 0;
+    memset(values, 0, *bytes);
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, uint16_t data) { 
