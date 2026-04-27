@@ -347,8 +347,8 @@ uint8_t ModbusRegisterVariant::setHoldFloat(uint16_t address, float data){
     uint16_t high = pWords[1];  // 高16位（小端字节序）
     uint16_t low = pWords[0];   // 低16位
     
-    if(!wHold[address].set(high)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
-    if(!wHold[address + 1].set(low)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if(!wHold[address].set(low)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if(!wHold[address + 1].set(high)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     return 0;
 }
 
@@ -357,8 +357,8 @@ uint8_t ModbusRegisterVariant::getHoldFloat(uint16_t address, float &data){
     if(address + 1 >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     
     uint16_t high = 0, low = 0;
-    if(!wHold[address].get(high)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
-    if(!wHold[address + 1].get(low)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if(!wHold[address].get(low)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if(!wHold[address + 1].get(high)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     
     // 直接用uint16_t指针合并高低16位，比uint32_t位操作更快速
     uint16_t *pWords = (uint16_t*)&data;
@@ -378,15 +378,15 @@ inline void ModbusRegisterVariant::setHoldFloatFast(uint16_t address, float data
     uint16_t *pWords = (uint16_t*)&data;
     uint16_t high = pWords[1];  // 高16位
     uint16_t low = pWords[0];   // 低16位
-    wHold[address].set(high);
-    wHold[address + 1].set(low);
+    wHold[address].set(low);
+    wHold[address + 1].set(high);
 }
 
 inline void ModbusRegisterVariant::getHoldFloatFast(uint16_t address, float &data){
     if(address + 1 >= wHold.size()) return; //Out Of Range
     uint16_t high = 0, low = 0;
-    wHold[address].get(high);
-    wHold[address + 1].get(low);
+    wHold[address].get(low);
+    wHold[address + 1].get(high);
     uint16_t *pWords = (uint16_t*)&data;
     pWords[0] = low;   // 低16位
     pWords[1] = high;  // 高16位

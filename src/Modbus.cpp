@@ -14,6 +14,24 @@ ModbusRS485::ModbusRS485(HardwareSerial& serial, CRC16 *modbusCRC): RS485(serial
   clear();
 }
 
+uint8_t ModbusRS485::getSerialFrameLength(){
+  switch(serialConfig){
+    case SERIAL_8N1:
+      return 11; //1 start bit + 8 data bits + 1 stop bit + 2 CRC bytes
+    case SERIAL_8E1:
+    case SERIAL_8O1:
+      return 12; //1 start bit + 8 data bits + 1 parity bit + 1 stop bit + 2 CRC bytes
+    case SERIAL_8N2:
+      return 12; //1 start bit + 8 data bits + 2 stop bits + 2 CRC bytes
+    case SERIAL_8E2:
+    case SERIAL_8O2:
+      return 13; //1 start bit + 8 data bits + 1 parity bit + 2 stop bits + 2 CRC bytes
+    default:
+      return 11; //Default to SERIAL_8N1
+  }
+  return 11;
+}
+
 void ModbusRS485::clear(){
   state = ModbusRS485::WaitStation;
   failType = ModbusRS485::RcvNoFail; //Clear
@@ -45,9 +63,9 @@ bool ModbusRS485::update(){
 }
 
 void ModbusRS485::setStopDelay(uint32_t argStopDelay){
-  stopDelay = argStopDelay;
-  if(timeOut <= stopDelay){
-    setReceiveTimeOut(stopDelay); //Make sure timeout is larger than stopDelay
+  setDelay(0, argStopDelay);
+  if(timeOut <= argStopDelay){
+    setReceiveTimeOut(argStopDelay); //Make sure timeout is larger than stopDelay
   }
 }
 void ModbusRS485::setReceiveTimeOut(uint32_t argTime){
@@ -104,7 +122,9 @@ void ModbusRS485Master::onGetPack(){
 
 void ModbusRS485Master::begin(size_t baud, uint32_t config, int16_t rxPin, int16_t txPin, int16_t dePin, int16_t rePin, bool readBack){
   RS485::begin(baud,config,rxPin,txPin,dePin,rePin,readBack);
-  setStopDelay(ceil(3.5*1000000.0/baud));
+  serialConfig = config;
+  serialBaudrate = baud;
+  setStopDelay(ceil(3.5*1000000.0*getSerialFrameLength()/serialBaudrate));
   sendBackDelay = (uint32_t)(stopDelay*sendBackDelayRatio);
 }
 
@@ -115,7 +135,9 @@ void ModbusRS485Master::begin(size_t baud, uint32_t config, int16_t rxPin, int16
 
 void ModbusRS485Master::begin(RS485Config conf){
   RS485::begin(conf);
-  setStopDelay(ceil(3.5*1000000.0/conf.baudrate));
+  serialConfig = conf.config;
+  serialBaudrate = conf.baudrate;
+  setStopDelay(ceil(3.5*1000000.0*getSerialFrameLength()/serialBaudrate));
   sendBackDelay = (uint32_t)(stopDelay*sendBackDelayRatio);
 }
 
@@ -223,14 +245,18 @@ void ModbusRS485Slave::onGetPack(){
 void ModbusRS485Slave::begin(uint8_t pStation, size_t baud, uint32_t config, int16_t rxPin, int16_t txPin, int16_t dePin, int16_t rePin, bool readBack){
   RS485::begin(baud,config,rxPin,txPin,dePin,rePin,readBack);
   station = pStation;
-  setStopDelay(ceil(3.5*1000000.0/baud));
+  serialConfig = config;
+  serialBaudrate = baud;
+  setStopDelay(ceil(3.5*1000000.0*getSerialFrameLength()/serialBaudrate));
   sendBackDelay = (uint32_t)(stopDelay*sendBackDelayRatio);
 }
 
 void ModbusRS485Slave::begin(uint8_t pStation,RS485Config conf){
   RS485::begin(conf);
   station = pStation;
-  setStopDelay(ceil(3.5*1000000.0/conf.baudrate));
+  serialConfig = conf.config;
+  serialBaudrate = conf.baudrate;
+  setStopDelay(ceil(3.5*1000000.0*getSerialFrameLength()/serialBaudrate));
   sendBackDelay = (uint32_t)(stopDelay*sendBackDelayRatio);
 }
 

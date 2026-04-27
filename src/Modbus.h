@@ -6,6 +6,7 @@
 class ModbusRS485;
 typedef void(*ModbusCallbackOnReceived)(ModbusRS485 *modbusController);
 
+//ModbusRS485基类
 class ModbusRS485 : public RS485{
 public:
   constexpr static uint8_t WaitStation = 0x00;
@@ -19,7 +20,6 @@ public:
   constexpr static uint8_t RcvUnsupportedFunctionCode = 0x04;
   
   ModbusCallbackOnReceived onReceived;
-  uint32_t stopDelay;
   uint32_t timeOut; //Pack Receive Timeout
   uint32_t sendBackStartTick;
   uint32_t sendBackDelay;
@@ -32,6 +32,9 @@ public:
   uint16_t received;
   uint8_t state;
   uint8_t failType;
+
+  uint8_t serialConfig;
+  uint32_t serialBaudrate;
 
   bool debugReadPrint;
 
@@ -47,6 +50,8 @@ public:
   void printFailType(Stream& stream);
   const char* toFailType(uint8_t failTypeID);
   void clearStatics();
+  uint8_t getSerialFrameLength();
+
   inline bool isStationValid(uint8_t st){ return st >= 1 && st <= 247; }
   
   inline void setDebugReadPrintEnabled(bool argDebugReadPrint){ debugReadPrint = argDebugReadPrint; }
