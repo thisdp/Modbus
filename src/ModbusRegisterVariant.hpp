@@ -3,6 +3,7 @@
 #include "ModbusPack.h"
 #include <vector>
 #include <stdexcept>
+#include <string.h>
 using namespace std;
 // 使用 uint8_t 作为底层枚举类型的大小
 enum class RegisterType : uint8_t { Direct, Pointer };
@@ -19,8 +20,8 @@ public:
     RegisterType type;
 
     RegVariant() : data(), type(RegisterType::Direct) {}
-    RegVariant(T v) : data(), type(RegisterType::Direct) { this->data.value = v; }
-    RegVariant(T* p) : data(), type(RegisterType::Pointer) { this->data.ptr = p; }
+    RegVariant(T v) : data(), type(RegisterType::Direct) { data.value = v; }
+    RegVariant(T* p) : data(), type(RegisterType::Pointer) { data.ptr = p; }
     bool isDirect() const { return type == RegisterType::Direct; }
     bool isPointer() const { return type == RegisterType::Pointer; }
     T &get() {
@@ -218,7 +219,7 @@ uint8_t ModbusRegisterVariant::getCoil(uint16_t address, uint8_t &state){
 
 uint8_t ModbusRegisterVariant::getCoil(uint16_t address){
     uint8_t state = false;
-    this->getCoil(address, state);
+    getCoil(address, state);
     return state;
 }
 
@@ -245,7 +246,7 @@ uint8_t ModbusRegisterVariant::getDiscreteInput(uint16_t address, uint8_t &state
 
 uint8_t ModbusRegisterVariant::getDiscreteInput(uint16_t address){
     uint8_t state = false;
-    this->getDiscreteInput(address, state);
+    getDiscreteInput(address, state);
     return state;
 }
 
@@ -275,14 +276,14 @@ uint8_t ModbusRegisterVariant::getInput(uint16_t address, uint16_t &data){
 
 uint8_t ModbusRegisterVariant::getInput(uint16_t address, uint32_t &data){ 
     uint16_t dataU16;
-    uint8_t result = this->getInput(address, dataU16);
+    uint8_t result = getInput(address, dataU16);
     data = dataU16;
     return result;
 }
 
 uint16_t ModbusRegisterVariant::getInput(uint16_t address){
     uint16_t state = 0;
-    this->getInput(address, state);
+    getInput(address, state);
     return state;
 }
 
@@ -322,14 +323,14 @@ uint8_t ModbusRegisterVariant::getHold(uint16_t address, uint16_t &data){
 
 uint8_t ModbusRegisterVariant::getHold(uint16_t address, uint32_t &data){
     uint16_t dataU16;
-    uint8_t result = this->getHold(address, dataU16);
+    uint8_t result = getHold(address, dataU16);
     data = dataU16;
     return result;
 }
 
 uint16_t ModbusRegisterVariant::getHold(uint16_t address){
     uint16_t state = 0;
-    this->getHold(address, state);
+    getHold(address, state);
     return state;
 }
 
@@ -342,13 +343,11 @@ uint8_t ModbusRegisterVariant::setHoldFloat(uint16_t address, float data){
     // Float占用两个连续的uint16_t寄存器位置
     if(address + 1 >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     
-    // 直接用uint16_t指针提取高低16位，比强制转换uint32_t更快速
-    uint16_t *pWords = (uint16_t*)&data;
-    uint16_t high = pWords[1];  // 高16位（小端字节序）
-    uint16_t low = pWords[0];   // 低16位
+    uint16_t words[2];
+    memcpy(words, &data, sizeof(data));
     
-    if(!wHold[address].set(low)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
-    if(!wHold[address + 1].set(high)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if(!wHold[address].set(words[0])) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if(!wHold[address + 1].set(words[1])) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     return 0;
 }
 
@@ -356,40 +355,33 @@ uint8_t ModbusRegisterVariant::getHoldFloat(uint16_t address, float &data){
     // Float占用两个连续的uint16_t寄存器位置
     if(address + 1 >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     
-    uint16_t high = 0, low = 0;
-    if(!wHold[address].get(low)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
-    if(!wHold[address + 1].get(high)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
-    
-    // 直接用uint16_t指针合并高低16位，比uint32_t位操作更快速
-    uint16_t *pWords = (uint16_t*)&data;
-    pWords[0] = low;   // 低16位（小端字节序）
-    pWords[1] = high;  // 高16位
+    uint16_t words[2];
+    if(!wHold[address].get(words[0])) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if(!wHold[address + 1].get(words[1])) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    memcpy(&data, words, sizeof(data));
     return 0;
 }
 
 float ModbusRegisterVariant::getHoldFloat(uint16_t address){
     float data = 0.0f;
-    this->getHoldFloat(address, data);
+    getHoldFloat(address, data);
     return data;
 }
 
 inline void ModbusRegisterVariant::setHoldFloatFast(uint16_t address, float data){
     if(address + 1 >= wHold.size()) return; //Out Of Range
-    uint16_t *pWords = (uint16_t*)&data;
-    uint16_t high = pWords[1];  // 高16位
-    uint16_t low = pWords[0];   // 低16位
-    wHold[address].set(low);
-    wHold[address + 1].set(high);
+    uint16_t words[2];
+    memcpy(words, &data, sizeof(data));
+    wHold[address].set(words[0]);
+    wHold[address + 1].set(words[1]);
 }
 
 inline void ModbusRegisterVariant::getHoldFloatFast(uint16_t address, float &data){
     if(address + 1 >= wHold.size()) return; //Out Of Range
-    uint16_t high = 0, low = 0;
-    wHold[address].get(low);
-    wHold[address + 1].get(high);
-    uint16_t *pWords = (uint16_t*)&data;
-    pWords[0] = low;   // 低16位
-    pWords[1] = high;  // 高16位
+    uint16_t words[2];
+    wHold[address].get(words[0]);
+    wHold[address + 1].get(words[1]);
+    memcpy(&data, words, sizeof(data));
 }
 
 //Use this if it is slave, request pack is from master
@@ -408,7 +400,7 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameRequest, ModbusFrame &f
         uint16_t startAddress = pIn->getStartAddress();
         for(uint16_t i=0; i<pIn->getQuantity(); i++){
             uint8_t state = false;
-            result = this->getCoil(startAddress+i,state);
+            result = getCoil(startAddress+i,state);
             if(result != 0) break;
             pOut->setValue(i,state);
         }
@@ -424,7 +416,7 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameRequest, ModbusFrame &f
         uint16_t startAddress = pIn->getStartAddress();
         for(uint16_t i=0; i<pIn->getQuantity(); i++){
             uint8_t state = false;
-            result = this->getDiscreteInput(startAddress+i,state);
+            result = getDiscreteInput(startAddress+i,state);
             if(result != 0) break;
             pOut->setValue(i,state);
         }
@@ -440,7 +432,7 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameRequest, ModbusFrame &f
         uint16_t startAddress = pIn->getStartAddress();
         for(uint16_t i=0; i<pIn->getQuantity(); i++){
             uint16_t state = false;
-            result = this->getHold(startAddress+i,state);
+            result = getHold(startAddress+i,state);
             pOut->setValue(i,result==0?state:0);
         }
         break;
@@ -455,7 +447,7 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameRequest, ModbusFrame &f
         uint16_t startAddress = pIn->getStartAddress();
         for(uint16_t i=0; i<pIn->getQuantity(); i++){
             uint16_t state = false;
-            result = this->getInput(startAddress+i,state);
+            result = getInput(startAddress+i,state);
             if(result != 0) break;
             pOut->setValue(i,state);
         }
@@ -473,7 +465,7 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameRequest, ModbusFrame &f
         Serial.println(pIn->value->get());
         Serial.println("写单线圈结束");
         #endif
-        result = this->setCoil(startAddress,pIn->getValue());
+        result = setCoil(startAddress,pIn->getValue());
         if(result != 0) break;
         pOut->setValue(pIn->getValue());
         pOut->setStartAddress(pIn->getStartAddress());
@@ -490,7 +482,7 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameRequest, ModbusFrame &f
         Serial.println(pIn->getValue());
         Serial.println("写单保持寄存器结束");
         #endif
-        result = this->setHold(startAddress,pIn->getValue());
+        result = setHold(startAddress,pIn->getValue());
         if(result != 0) break;
         pOut->setValue(pIn->getValue());
         pOut->setStartAddress(pIn->getStartAddress());
@@ -508,7 +500,7 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameRequest, ModbusFrame &f
         Serial.println("写多线圈开始");
         #endif
         for(uint16_t i=0; i<pIn->getQuantity(); i++){
-            result = this->setCoil(startAddress+i,pIn->getValue(i));
+            result = setCoil(startAddress+i,pIn->getValue(i));
             #ifdef DEBUG_MODBUS_ON
             Serial.print(startAddress+i);
             Serial.print(":");
@@ -535,7 +527,7 @@ uint8_t ModbusRegisterVariant::process(ModbusFrame &frameRequest, ModbusFrame &f
         Serial.println("写多保持寄存器开始");
         #endif
         for(uint16_t i=0; i<pIn->getQuantity(); i++){
-            result = this->setHold(startAddress+i,pIn->getValue(i));
+            result = setHold(startAddress+i,pIn->getValue(i));
             #ifdef DEBUG_MODBUS_ON
             Serial.print(startAddress+i);
             Serial.print(":");
@@ -578,7 +570,7 @@ uint8_t ModbusRegisterVariant::processResponse(ModbusFrame &frameResponse, Modbu
         #endif
         uint16_t startAddress = fReq->getStartAddress();
         for(uint16_t i=0; i<fReq->getQuantity(); i++){
-            result = this->setCoil(startAddress+i,fResp->getValue(i));
+            result = setCoil(startAddress+i,fResp->getValue(i));
             if(result != 0) break;
         }
         break;
@@ -591,7 +583,7 @@ uint8_t ModbusRegisterVariant::processResponse(ModbusFrame &frameResponse, Modbu
         #endif
         uint16_t startAddress = fReq->getStartAddress();
         for(uint16_t i=0; i<fReq->getQuantity(); i++){
-            result = this->setDiscreteInput(startAddress+i,fResp->getValue(i));
+            result = setDiscreteInput(startAddress+i,fResp->getValue(i));
             if(result != 0) break;
         }
         break;
@@ -604,7 +596,7 @@ uint8_t ModbusRegisterVariant::processResponse(ModbusFrame &frameResponse, Modbu
         #endif
         uint16_t startAddress = fReq->getStartAddress();
         for(uint16_t i=0; i<fReq->getQuantity(); i++){
-            result = this->setHold(startAddress+i,fResp->getValue(i));
+            result = setHold(startAddress+i,fResp->getValue(i));
             if(result != 0) break;
         }
         break;
@@ -617,7 +609,7 @@ uint8_t ModbusRegisterVariant::processResponse(ModbusFrame &frameResponse, Modbu
         #endif
         uint16_t startAddress = fReq->getStartAddress();
         for(uint16_t i=0; i<fReq->getQuantity(); i++){
-            result = this->setInput(startAddress+i,fResp->getValue(i));
+            result = setInput(startAddress+i,fResp->getValue(i));
             if(result != 0) break;
         }
         break;
