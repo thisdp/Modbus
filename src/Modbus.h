@@ -33,7 +33,7 @@ public:
   uint8_t state;
   uint8_t failType;
 
-  uint8_t serialConfig;
+  uint32_t serialConfig;
   uint32_t serialBaudrate;
 
   bool debugReadPrint;

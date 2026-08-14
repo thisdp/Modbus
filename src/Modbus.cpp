@@ -41,7 +41,12 @@ void ModbusRS485::clear(){
 bool ModbusRS485::update(){
   while(available()){
     uint8_t d = read();
-    if(debugReadPrint) debugStream->println(d);
+    if(debugReadPrint && debugStream){
+      debugStream->print("[");
+      debugStream->print(micros());
+      debugStream->print("]");
+      debugStream->println(d);
+    }
     switch(state){
       case ModbusRS485::WaitStation:  //Waiting Station
         state = ModbusRS485::WaitFunctionCode; //Wait Function Code
@@ -270,12 +275,14 @@ void ModbusRS485Slave::update(){
   }
   uint8_t incoming = available();
   if(state != ModbusRS485::WaitStation && !incoming && isTimedout()){
-    /*Serial.println("------");
-    Serial.println(micros());
-    Serial.println(lastTick);
-    Serial.println(micros()-lastTick);
-    Serial.println(stopDelay);
-    Serial.println("------");*/
+    if(debugReadPrint && debugStream){
+      debugStream->println("------");
+      debugStream->println(micros());
+      debugStream->println(lastTick);
+      debugStream->println(micros()-lastTick);
+      debugStream->println(stopDelay*1000);
+      debugStream->println("------");
+    }
     if(received >= 4){
       rxFrame.validDataLength = received;
       onGetPack();

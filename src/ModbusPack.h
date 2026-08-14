@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <string.h>
 #include "CRC16.h"
-
 extern CRC16 gModbusCRC;
 
 #pragma pack(push, 1) //1字节对齐
@@ -37,8 +36,8 @@ public:
   //virtual void process();
   //ModbusBasePack *CastModbusRequestPack(uint8_t *p);
   //ModbusBasePack *CastModbusResponsePack(uint8_t *p);
-  virtual void pushRegisters(bool toTail, uint16_t quant, uint8_t *data) {}
-  virtual void popRegisters(bool toTail, uint16_t quant) {}
+  virtual void pushRegisters(bool toTail, uint16_t quant, uint8_t *data) {UNUSED(toTail); UNUSED(quant); UNUSED(data);}
+  virtual void popRegisters(bool toTail, uint16_t quant) {UNUSED(toTail); UNUSED(quant);}
   virtual bool isDiagnosePack() { return false;}
   virtual ~ModbusBasePack(){}; // 定义基类的虚析构函数，若不定义该函数，则会出现警告信息
 public: //静态
@@ -115,7 +114,7 @@ public:
   inline void setDiagnoseCode(uint8_t code){
     *diagnoseCode = code|0x80;
   }
-  inline uint8_t getDiagnoseCode(uint8_t code){
+  inline uint8_t getDiagnoseCode(){
     return *diagnoseCode;
   }
   bool isDiagnosePack() { return true; }
@@ -255,7 +254,7 @@ public:
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     *bytes = (uint8_t)(quant*2);
-    memset(values, 0, *bytes);
+    memset((uint8_t*)values, 0, *bytes);
     setEOP(((uint8_t*)values)+getBytes());
     _quantity = quant;
   }
@@ -304,7 +303,7 @@ public:
   inline uint8_t getBytes(){ return *bytes; }
   inline void initValues(uint16_t quant){
     *bytes = (uint8_t)(quant*2);
-    memset(values, 0, *bytes);
+    memset((uint8_t*)values, 0, *bytes);
     setEOP(((uint8_t*)values)+getBytes());
     _quantity = quant;
   }
@@ -458,7 +457,7 @@ public:
   inline void initValues(uint16_t quant){
     setQuantity(quant);
     *bytes = (uint8_t)(quant*2);
-    memset(values, 0, *bytes);
+    memset((uint8_t*)values, 0, *bytes);
     setEOP(((uint8_t*)values)+getBytes());
   }
   inline void setValue(uint8_t atAddress, uint16_t data) { 

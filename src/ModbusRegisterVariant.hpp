@@ -145,54 +145,54 @@ ModbusRegisterVariant::ModbusRegisterVariant(size_t bCoilCount, size_t bDiscrete
 }
 
 uint8_t ModbusRegisterVariant::registerCoil(uint16_t address, uint8_t *target){   //一次必须映射8个线圈
-    if(address >= bCoil.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if((size_t)address >= bCoil.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     bCoil[address].setAsPointer(target);
     return 0;
 }
 
 uint8_t ModbusRegisterVariant::registerCoil(uint16_t address, uint8_t &target){   //一次必须映射8个线圈
-    if(address >= bCoil.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if((size_t)address >= bCoil.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     bCoil[address].setAsPointer(&target);
     return 0;
 }
 
 uint8_t ModbusRegisterVariant::registerDiscreteInput(uint16_t address, uint8_t *target){  //一次必须映射8个输入状态
-    if(address >= bDiscreteInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if((size_t)address >= bDiscreteInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     bDiscreteInput[address].setAsPointer(target);
     return 0;
 }
 
 uint8_t ModbusRegisterVariant::registerDiscreteInput(uint16_t address, uint8_t &target){  //一次必须映射8个输入状态
-    if(address >= bDiscreteInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if((size_t)address >= bDiscreteInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     bDiscreteInput[address].setAsPointer(&target);
     return 0;
 }
 
 uint8_t ModbusRegisterVariant::registerInput(uint16_t address, uint16_t *target){
-    if(address >= wInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if((size_t)address >= wInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     wInput[address].setAsPointer(target);
     return 0;
 }
 
 uint8_t ModbusRegisterVariant::registerInput(uint16_t address, uint16_t &target){
-    if(address >= wInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if((size_t)address >= wInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     wInput[address].setAsPointer(&target);
     return 0;
 }
 
 uint8_t ModbusRegisterVariant::registerHold(uint16_t address, uint16_t *target){
-    if(address >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if((size_t)address >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     wHold[address].setAsPointer(target);
     return 0;
 }
 uint8_t ModbusRegisterVariant::registerHold(uint16_t address, uint16_t &target){
-    if(address >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if((size_t)address >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     wHold[address].setAsPointer(&target);
     return 0;
 }
 
 uint8_t ModbusRegisterVariant::setCoil(uint16_t address, uint8_t state){
-    if(address >= bCoil.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
+    if((size_t)address >= bCoil.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
 	bool allowRegisterChange = true;
 	if(onCoilPreSet) allowRegisterChange = onCoilPreSet(this,address,state);
 	if(allowRegisterChange){	//Allow Register Change
@@ -207,7 +207,7 @@ uint8_t ModbusRegisterVariant::setCoil(uint16_t address, uint8_t state){
 }
 
 uint8_t ModbusRegisterVariant::getCoil(uint16_t address, uint8_t &state){
-    if(address >= bCoil.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
+    if((size_t)address >= bCoil.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     uint16_t u16State = 0;
     if(onCoilGet && onCoilGet(this,address,u16State)){
         state = u16State;
@@ -224,7 +224,7 @@ uint8_t ModbusRegisterVariant::getCoil(uint16_t address){
 }
 
 uint8_t ModbusRegisterVariant::setDiscreteInput(uint16_t address, uint8_t state){
-    if(address >= bDiscreteInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
+    if((size_t)address >= bDiscreteInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     uint8_t tState = false;
     if(!bDiscreteInput[address].get(tState)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     if(!bDiscreteInput[address].set(state)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
@@ -234,7 +234,7 @@ uint8_t ModbusRegisterVariant::setDiscreteInput(uint16_t address, uint8_t state)
 }
 
 uint8_t ModbusRegisterVariant::getDiscreteInput(uint16_t address, uint8_t &state){
-    if(address >= bDiscreteInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
+    if((size_t)address >= bDiscreteInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     uint16_t u16State = 0;
     if(onDiscreteInputGet && onDiscreteInputGet(this,address,u16State)){
         state = u16State;
@@ -251,7 +251,7 @@ uint8_t ModbusRegisterVariant::getDiscreteInput(uint16_t address){
 }
 
 uint8_t ModbusRegisterVariant::setInput(uint16_t address, uint16_t data){
-    if(address >= wInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
+    if((size_t)address >= wInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     uint16_t oldState = 0;
     if(!wInput[address].get(oldState)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     if(!wInput[address].set(data)) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
@@ -260,12 +260,12 @@ uint8_t ModbusRegisterVariant::setInput(uint16_t address, uint16_t data){
 }
 
 uint16_t &ModbusRegisterVariant::getInputRef(uint16_t address){   //Only non-pointer register
-    if(address >= wInput.size()) address = 0;
+    if((size_t)address >= wInput.size()) address = 0;
     return *(uint16_t*)&(wInput[address]);
 }
 
 uint8_t ModbusRegisterVariant::getInput(uint16_t address, uint16_t &data){
-    if(address >= wInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
+    if((size_t)address >= wInput.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     uint16_t u16State = 0;
     if(!(onInputGet && onInputGet(this,address,u16State)))
         if(!wInput[address].get(u16State))
@@ -288,7 +288,7 @@ uint16_t ModbusRegisterVariant::getInput(uint16_t address){
 }
 
 uint8_t ModbusRegisterVariant::setHold(uint16_t address, uint16_t data){
-    if(address >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
+    if((size_t)address >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
 	bool allowRegisterChange = true;
 	if(onHoldPreSet) allowRegisterChange = onHoldPreSet(this,address,data);
 	if(allowRegisterChange){	//Allow Register Change
@@ -301,17 +301,17 @@ uint8_t ModbusRegisterVariant::setHold(uint16_t address, uint16_t data){
 }
 
 inline void ModbusRegisterVariant::setHoldFast(uint16_t address, uint16_t data){
-    if(address >= wHold.size()) return; //Out Of Range
+    if((size_t)address >= wHold.size()) return; //Out Of Range
     wHold[address].set(data);
 }
 
 uint16_t &ModbusRegisterVariant::getHoldRef(uint16_t address){   //Only non-pointer register
-    if(address >= wHold.size()) address = 0;
+    if((size_t)address >= wHold.size()) address = 0;
     return *(uint16_t*)&(wHold[address]);
 }
 
 uint8_t ModbusRegisterVariant::getHold(uint16_t address, uint16_t &data){
-    if(address >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
+    if((size_t)address >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress; //Out Of Range
     uint16_t u16State = 0;
     if(!(onHoldGet && onHoldGet(this,address,u16State))){
         if(!wHold[address].get(u16State))
@@ -335,13 +335,13 @@ uint16_t ModbusRegisterVariant::getHold(uint16_t address){
 }
 
 inline void ModbusRegisterVariant::getHoldFast(uint16_t address, uint16_t &data){
-    if(address >= wHold.size()) return; //Out Of Range
+    if((size_t)address >= wHold.size()) return; //Out Of Range
     wHold[address].get(data);
 }
 
 uint8_t ModbusRegisterVariant::setHoldFloat(uint16_t address, float data){
     // Float占用两个连续的uint16_t寄存器位置
-    if(address + 1 >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if((size_t)address + 1 >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     
     uint16_t words[2];
     memcpy(words, &data, sizeof(data));
@@ -353,7 +353,7 @@ uint8_t ModbusRegisterVariant::setHoldFloat(uint16_t address, float data){
 
 uint8_t ModbusRegisterVariant::getHoldFloat(uint16_t address, float &data){
     // Float占用两个连续的uint16_t寄存器位置
-    if(address + 1 >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
+    if((size_t)address + 1 >= wHold.size()) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
     
     uint16_t words[2];
     if(!wHold[address].get(words[0])) return MBPDiagnose::DiagnoseCode_InvalidDataAddress;
@@ -369,7 +369,7 @@ float ModbusRegisterVariant::getHoldFloat(uint16_t address){
 }
 
 inline void ModbusRegisterVariant::setHoldFloatFast(uint16_t address, float data){
-    if(address + 1 >= wHold.size()) return; //Out Of Range
+    if((size_t)address + 1 >= wHold.size()) return; //Out Of Range
     uint16_t words[2];
     memcpy(words, &data, sizeof(data));
     wHold[address].set(words[0]);
@@ -377,7 +377,7 @@ inline void ModbusRegisterVariant::setHoldFloatFast(uint16_t address, float data
 }
 
 inline void ModbusRegisterVariant::getHoldFloatFast(uint16_t address, float &data){
-    if(address + 1 >= wHold.size()) return; //Out Of Range
+    if((size_t)address + 1 >= wHold.size()) return; //Out Of Range
     uint16_t words[2];
     wHold[address].get(words[0]);
     wHold[address + 1].get(words[1]);

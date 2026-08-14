@@ -98,9 +98,8 @@ void ModbusFrame::applyCRC(){
 
 void ModbusFrame::write(Stream &s){
     crc = (uint16_t*)(pack->endOfPack);
-    s.write((uint8_t*)station, 1);
-    pack->write(s);
-    s.write((uint8_t*)crc, 2);
+    uint16_t frameLength = (uint16_t)(pack->getSize() + sizeof(uint8_t) + sizeof(uint8_t));
+    s.write((uint8_t*)station, frameLength);
 }
 
 void ModbusFrame::writeRaw(Stream &s, uint16_t length){
@@ -115,6 +114,7 @@ void ModbusBasePack::write(Stream& s) {
 }
 
 uint8_t* ModbusBasePack::cast(uint8_t *pBuffer, bool isNew) {
+	UNUSED(isNew);
     functionCode = pBuffer;
     pBuffer++;
     return pBuffer;
@@ -154,6 +154,7 @@ void MBPReadCoilRegisterRequest::write(Stream& s) {
     s.write((uint8_t*)quantity, 2);
 }
 void MBPReadCoilRegisterRequest::popRegisters(bool fromHead, uint16_t quant){
+	UNUSED(fromHead);
     setQuantity(getQuantity()-quant);  //减去删除的寄存器数量
 }
 //回复
@@ -214,6 +215,7 @@ void MBPReadDiscreteInputRegisterRequest::write(Stream& s) {
     s.write((uint8_t*)quantity, 2);
 }
 void MBPReadDiscreteInputRegisterRequest::popRegisters(bool fromHead, uint16_t quant){
+	UNUSED(fromHead);
     setQuantity(getQuantity()-quant);  //减去删除的寄存器数量
 }
 //回复
@@ -274,7 +276,8 @@ void MBPReadHoldingRegisterRequest::write(Stream& s) {
     s.write((uint8_t*)quantity, 2);
 }
 void MBPReadHoldingRegisterRequest::popRegisters(bool fromHead, uint16_t quant){
-    setQuantity(getQuantity()-quant);  //减去删除的寄存器数量
+	UNUSED(fromHead);
+	setQuantity(getQuantity()-quant);  //减去删除的寄存器数量
 }
 //回复
 uint8_t* MBPReadHoldingRegisterResponse::cast(uint8_t *pBuffer, bool isNew) {
@@ -331,7 +334,8 @@ void MBPReadInputRegisterRequest::write(Stream& s) {
     s.write((uint8_t*)quantity, 2);
 }
 void MBPReadInputRegisterRequest::popRegisters(bool fromHead, uint16_t quant){
-    setQuantity(getQuantity()-quant);  //减去删除的寄存器数量
+	UNUSED(fromHead);
+	setQuantity(getQuantity()-quant);  //减去删除的寄存器数量
     /*if(fromHead){  //如果从头往前后
       if(!keepStartAddress){  //如果不保持起始地址
         setStartAddress(getStartAddress()+quant); //偏移起始地址
@@ -481,7 +485,8 @@ void MBPWriteMultipleCoilRegistersRequest::write(Stream& s) {
 }
 
 void MBPWriteMultipleCoilRegistersRequest::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
-    // 计算需要的字节数
+	UNUSED(fromHead);
+	// 计算需要的字节数
     uint16_t currentQuantity = getQuantity();
     uint8_t neededBytes = (uint8_t)((currentQuantity + quant + 7) >> 3);
     uint8_t origBytes = *bytes;
@@ -557,7 +562,9 @@ void MBPWriteMultipleCoilRegistersResponse::write(Stream& s) {
     s.write((uint8_t*)quantity, 2);
 }
 void MBPWriteMultipleCoilRegistersResponse::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
-    setQuantity(getQuantity()+quant);
+	UNUSED(fromHead);
+	UNUSED(data);
+	setQuantity(getQuantity()+quant);
 }
 
 //写多个保持寄存器0x10
@@ -638,7 +645,9 @@ void MBPWriteMultipleHoldingRegistersResponse::write(Stream& s) {
     s.write((uint8_t*)quantity, 2);
 }
 void MBPWriteMultipleHoldingRegistersResponse::pushRegisters(bool fromHead, uint16_t quant, uint8_t *data){
-    setQuantity(getQuantity()+quant);
+	UNUSED(fromHead);
+	UNUSED(data);
+	setQuantity(getQuantity()+quant);
 }
 
 ModbusBasePack *ModbusBasePack::CreateModbusDiagnosePack(){
